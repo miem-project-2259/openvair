@@ -18,6 +18,14 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         self._cron = cron_obj
         self.jobs: dict[str, CronItem] = {}
 
+    @classmethod
+    def _upd_job(cls, job: CronItem, data: Dict) -> None:
+        job.command = data.get('command')
+        job.comment = data.get('comment')
+        job.user = data.get('user')
+        job.pre_comment = data.get('pre_comment')
+        job.setall(data.get('schedule'))
+
     def _job(self, key: str) -> CronItem:
         if key not in self.jobs:
             raise CronJobNotFound(key)
