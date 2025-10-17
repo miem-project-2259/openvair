@@ -8,6 +8,8 @@ interface and shared fields for managing schedulers.
 import abc
 from typing import Any, Dict
 
+from openvair.modules.scheduler.domain.exception import CronJobNotFound
+
 from crontab import CronTab, CronItem
 
 
@@ -15,6 +17,11 @@ class BaseScheduler(metaclass=abc.ABCMeta):
     def __init__(self, cron_obj: CronTab) -> None:
         self._cron = cron_obj
         self.jobs: dict[str, CronItem] = {}
+
+    def _job(self, key: str) -> CronItem:
+        if key not in self.jobs:
+            raise CronJobNotFound(key)
+        return self.jobs[key]
 
     @abc.abstractmethod
     def create(self, creation_data: Dict) -> None:
