@@ -12,13 +12,12 @@ from crontab import CronTab, CronItem
 
 
 class BaseScheduler(metaclass=abc.ABCMeta):
-    def __init__(self, cron_obj: CronTab):
+    def __init__(self, cron_obj: CronTab) -> None:
         self._cron = cron_obj
-        self.jobs: list[CronItem] = []
-
+        self.jobs: dict[str, CronItem] = {}
 
     @abc.abstractmethod
-    def create(self, creation_data: Dict) -> CronItem:
+    def create(self, creation_data: Dict) -> None:
         """Create a scheduled task.
 
         Args:
@@ -36,6 +35,6 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def delete(self, CronItem) -> None:
+    def delete(self, key: str) -> None:
         """Delete a scheduled task."""
         ...
