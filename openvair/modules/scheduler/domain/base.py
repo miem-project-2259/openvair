@@ -1,55 +1,84 @@
 """Base classes for scheduler domain models.
 
 This module defines the `BaseScheduler` abstract class, which serves as the
-foundation for implementing specific scheduler types. It declares the required
-interface and shared fields for managing schedulers.
+foundation for implementing specific scheduler types (e.g., SystemCronScheduler).
+It declares the required interface and shared fields for managing scheduled tasks.
 """
 
 import abc
-from typing import Any, Dict
-
-from openvair.modules.scheduler.domain.exception import CronJobNotFound
-
-from crontab import CronTab, CronItem
+from typing import Any, Dict, List
 
 
 class BaseScheduler(metaclass=abc.ABCMeta):
-    def __init__(self, cron_obj: CronTab) -> None:
-        self._cron = cron_obj
-        self.jobs: dict[str, CronItem] = {}
+    """Abstract base class for scheduler domain models.
 
-    @classmethod
-    def _upd_job(cls, job: CronItem, data: Dict) -> None:
-        job.command = data.get('command')
-        job.comment = data.get('comment')
-        job.user = data.get('user')
-        job.pre_comment = data.get('pre_comment')
-        job.setall(data.get('schedule'))
-
-    def _job(self, key: str) -> CronItem:
-        if key not in self.jobs:
-            raise CronJobNotFound(key)
-        return self.jobs[key]
+    This class defines the interface for all scheduler operations such as
+    creation, editing, deletion, and retrieval of scheduled tasks (cron jobs).
+    Concrete implementations must implement all abstract methods.
+    """
 
     @abc.abstractmethod
-    def create(self, creation_data: Dict) -> None:
+    def create(self, creation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a scheduled task.
 
         Args:
-            creation_data (Dict): Data required for scheduler creation.
+            creation_data (Dict[str, Any]): Data required for task creation,
+                e.g., {'schedule': '0 0 * * *', 'command': '/bin/true', 'comment': 'my-job-id'}.
+
+        Returns:
+            Dict[str, Any]: A dictionary representation of the created task.
         """
         ...
 
     @abc.abstractmethod
-    def edit(self, editing_data: Dict) -> Dict[str, Any]:
-        """Edit scheduled tasks.
+    def get(self, job_id: str) -> Dict[str, Any]:
+        """Retrieve a single scheduled task by its unique identifier.
 
         Args:
-            editing_data (Dict): Data for modifying the scheduler.
+            job_id (str): The unique identifier (e.g., comment) of the task.
+
+        Returns:
+            Dict[str, Any]: A dictionary representation of the found task.
+
+        Raises:
+            CronJobNotFound: If a task with the given ID is not found.
         """
         ...
 
     @abc.abstractmethod
-    def delete(self, key: str) -> None:
-        """Delete a scheduled task."""
+    def list_all(self) -> List[Dict[str, Any]]:
+        """Retrieve all scheduled tasks managed by this scheduler.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries, where each dictionary
+            represents a scheduled task.
+        """
+        ...
+
+    @abc.abstractmethod
+    def edit(self, job_id: str, editing_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Edit a scheduled task.
+
+        Args:
+            job_id (str): The unique identifier of the task to edit.
+            editing_data (Dict[str, Any]): New data for the task.
+
+        Returns:
+            Dict[str, Any]: A dictionary representation of the updated task.
+
+        Raises:
+            CronJobNotFound: If a task with the given ID is not found.
+        """
+        ...
+
+    @abc.abstractmethod
+    def delete(self, job_id: str) -> None:
+        """Delete a scheduled task by its unique identifier.
+
+        Args:
+            job_id (str): The unique identifier of the task to delete.
+
+        Raises:
+            CronJobNotFound: If a task with the given ID is not found.
+        """
         ...
