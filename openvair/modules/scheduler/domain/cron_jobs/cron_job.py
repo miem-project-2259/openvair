@@ -6,11 +6,11 @@ management of cron jobs
 
 from typing import Dict, Any
 
+from crontab import CronTab, CronItem
+
 from openvair.libs.log import get_logger
 from openvair.modules.scheduler.domain.base import BaseScheduler
-from openvair.modules.scheduler.domain.exception import SchedulerDomainException
-
-from crontab import CronTab
+from openvair.modules.scheduler.domain.exception import SchedulerDomainException, CronJobNotFound
 
 LOG = get_logger(__name__)
 
@@ -39,7 +39,7 @@ class CronJobScheduler(BaseScheduler):
                 for k, upd_data in editing_data:
                     job = self._job(k)
                     self._upd_job(job, upd_data)
-            # TODO determine return values
+
             return {}
         except SchedulerDomainException as error:
             LOG.error(f'Failed to edit scheduled tasks: {error}')
@@ -54,3 +54,16 @@ class CronJobScheduler(BaseScheduler):
         except SchedulerDomainException as error:
             LOG.error(f'Failed to delete scheduled task: {error}')
             raise
+
+    @classmethod
+    def _upd_job(cls, job: CronItem, data: Dict) -> None:
+        job.command = data.get('command')
+        job.comment = data.get('comment')
+        job.user = data.get('user')
+        job.pre_comment = data.get('pre_comment')
+        job.setall(data.get('schedule'))
+
+    def _job(self, key: str) -> CronItem:
+        if key not in self.jobs:
+            raise CronJobNotFound(key)
+        return self.jobs[key]
