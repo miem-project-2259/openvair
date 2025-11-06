@@ -19,9 +19,9 @@ jobs:
         uses: EverythingSuckz/github-telegram-notify@v1.1.2
         with:
           # A bot token for sending the github commit updates to a chat. You may create one my sending `/newbot` to [@BotFather](https://telegram.dog/BotFather)
-          bot_token: ${{ secrets.tg_notify_bot_token }}
+          bot_token: ${{ secrets.TG_NOTIFY_BOT_TOKEN }}
           # The ID of the chat where you want the bot to send the message
-          chat_id: ${{ secrets.tg_notify_chat_id }}
+          chat_id: ${{ secrets.TG_NOTIFY_CHAT_ID }}
           # The ID of the topic where you want to receive the notifications.
-          topic_id: ${{ secrets.tg_notify_topic_id }}
+          topic_id: ${{ secrets.TG_NOTIFY_TOPIC_ID }}
                 
