@@ -60,11 +60,10 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def edit(self, job_id: str, editing_data: Dict[str, Any]) -> Dict[str, Any]:
+    def edit(self, editing_data: Dict[str, Any]) -> Dict[str, Any]:
         """Edit a scheduled task.
 
         Args:
-            job_id (str): The unique identifier of the task to edit.
             editing_data (Dict[str, Any]): New data for the task.
 
         Returns:
