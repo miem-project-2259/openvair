@@ -2,7 +2,8 @@
 
 Defines schemas used as input payloads for scheduler-related API endpoints.
 These models represent user-submitted data for creating, updating,
-and deleting scheduled jobs.
+and deleting scheduled jobs, including dependency control
+("before" / "after") between tasks.
 
 Classes:
     - RequestCreateJob
@@ -12,7 +13,8 @@ Classes:
 
 from uuid import UUID
 from typing import Optional
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
+
 from openvair.common.base_pydantic_models import APIConfigRequestModel
 
 
@@ -25,6 +27,8 @@ class RequestCreateJob(APIConfigRequestModel):
         cron_schedule (str): CRON expression defining job schedule.
         command (str): Command to execute.
         enabled (bool): Indicates whether the job is active.
+        before_job_id (Optional[UUID]): Job that must finish before this one starts.
+        after_job_id (Optional[UUID]): Job that should run after this one completes.
     """
 
     name: str = Field(
@@ -56,6 +60,33 @@ class RequestCreateJob(APIConfigRequestModel):
         examples=[True],
         description="Indicates whether the job is enabled",
     )
+    before_job_id: Optional[UUID] = Field(
+        None,
+        examples=["c1b65a20-5b29-4b1d-8c1c-8c41cb47d111"],
+        description="If specified, this job will start only after the referenced job finishes",
+    )
+    after_job_id: Optional[UUID] = Field(
+        None,
+        examples=["f9d3a511-d3b4-4f4b-9287-4cbf3e6f49de"],
+        description="If specified, the referenced job will start after this one completes",
+    )
+
+    @field_validator("name", "cron_schedule", "command", mode="before")
+    @classmethod
+    def validate_non_empty(cls, value: str) -> str:
+        """Ensure that string fields are not empty or whitespace-only."""
+        if not value or not value.strip():
+            raise ValueError("Field cannot be empty or whitespace")
+        return value.strip()
+
+    @model_validator(mode="after")
+    def check_dependency_conflicts(self) -> "RequestCreateJob":
+        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
+        if self.before_job_id and self.after_job_id:
+            raise ValueError(
+                "Cannot specify both before_job_id and after_job_id for the same job."
+            )
+        return self
 
 
 class RequestUpdateJob(APIConfigRequestModel):
@@ -67,6 +98,8 @@ class RequestUpdateJob(APIConfigRequestModel):
         cron_schedule (Optional[str]): Updated CRON schedule.
         command (Optional[str]): Updated command.
         enabled (Optional[bool]): Indicates if the job should be active.
+        before_job_id (Optional[UUID]): Updated dependency before another job.
+        after_job_id (Optional[UUID]): Updated dependency after another job.
     """
 
     name: Optional[str] = Field(
@@ -97,6 +130,33 @@ class RequestUpdateJob(APIConfigRequestModel):
         examples=[False],
         description="Whether the job is enabled or disabled",
     )
+    before_job_id: Optional[UUID] = Field(
+        None,
+        examples=["d2c43a22-4e34-4e7f-9a3a-0af733d9a122"],
+        description="If specified, this job will start only after the referenced job finishes",
+    )
+    after_job_id: Optional[UUID] = Field(
+        None,
+        examples=["a9b51a12-bd31-4fa3-9523-f7e4b8e3d321"],
+        description="If specified, the referenced job will start after this one completes",
+    )
+
+    @field_validator("name", "cron_schedule", "command", mode="before")
+    @classmethod
+    def validate_optional_non_empty(cls, value: Optional[str]) -> Optional[str]:
+        """Validate optional string fields to ensure they are not just whitespace."""
+        if value is not None and not value.strip():
+            raise ValueError("Field cannot be only whitespace")
+        return value.strip() if value else value
+
+    @model_validator(mode="after")
+    def check_dependency_conflicts(self) -> "RequestUpdateJob":
+        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
+        if self.before_job_id and self.after_job_id:
+            raise ValueError(
+                "Cannot specify both before_job_id and after_job_id for the same job."
+            )
+        return self
 
 
 class RequestDeleteJob(APIConfigRequestModel):

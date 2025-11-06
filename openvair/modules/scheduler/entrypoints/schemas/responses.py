@@ -32,6 +32,8 @@ class JobResponse(APIConfigResponseModel):
         updated_at (datetime): Timestamp when the job was last updated.
         last_run (Optional[datetime]): Timestamp of the last job run.
         next_run (Optional[datetime]): Timestamp of the next scheduled run.
+        before_job_id (Optional[UUID]): Job that must finish before this one starts.
+        after_job_id (Optional[UUID]): Job that should run after this one completes.
     """
 
     id: UUID = Field(
@@ -64,13 +66,23 @@ class JobResponse(APIConfigResponseModel):
         examples=[True],
         description="Indicates whether the job is enabled",
     )
-    created_at: Optional[datetime] = Field(
+    before_job_id: Optional[UUID] = Field(
         None,
+        examples=["c1b65a20-5b29-4b1d-8c1c-8c41cb47d111"],
+        description="If specified, this job will start only after the referenced job finishes",
+    )
+    after_job_id: Optional[UUID] = Field(
+        None,
+        examples=["f9d3a511-d3b4-4f4b-9287-4cbf3e6f49de"],
+        description="If specified, the referenced job will start after this one completes",
+    )
+    created_at: datetime = Field(
+        ...,
         examples=["2024-05-28T10:45:21.000Z"],
         description="Timestamp when the job was created",
     )
-    updated_at: Optional[datetime] = Field(
-        None,
+    updated_at: datetime = Field(
+        ...,
         examples=["2024-06-01T09:12:45.000Z"],
         description="Timestamp when the job was last updated",
     )
