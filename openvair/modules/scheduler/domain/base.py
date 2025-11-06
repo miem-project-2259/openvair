@@ -8,6 +8,7 @@ It declares the required interface and shared fields for managing scheduled task
 import abc
 from typing import Any, Dict, List
 
+from crontab import CronTab, CronItem
 
 class BaseScheduler(metaclass=abc.ABCMeta):
     """Abstract base class for scheduler domain models.
@@ -16,6 +17,9 @@ class BaseScheduler(metaclass=abc.ABCMeta):
     creation, editing, deletion, and retrieval of scheduled tasks (cron jobs).
     Concrete implementations must implement all abstract methods.
     """
+    def __init__(self, cron_obj: CronTab) -> None:
+        self._cron = cron_obj
+        self.jobs: dict[str, CronItem] = {}
 
     @abc.abstractmethod
     def create(self, creation_data: Dict[str, Any]) -> Dict[str, Any]:
