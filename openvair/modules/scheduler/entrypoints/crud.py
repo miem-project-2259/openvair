@@ -18,7 +18,8 @@ from uuid import UUID
 from typing import Any, Dict, List
 
 from openvair.libs.log import get_logger
-from openvair.modules.scheduler.adapters.dto.internal.commands import GetJobServiceCommandDTO
+from openvair.modules.scheduler.adapters.dto.internal.commands import CreateJobServiceCommandDTO, DeleteJobServiceCommandDTO, GetJobServiceCommandDTO, UpdateJobServiceCommandDTO
+from openvair.modules.scheduler.entrypoints.schemas.requests import RequestCreateJob, RequestUpdateJob
 from openvair.modules.scheduler.entrypoints.schemas.responses import JobListResponse, JobResponse
 from openvair.modules.template.config import API_SERVICE_LAYER_QUEUE_NAME
 from openvair.libs.messaging.messaging_agents import MessagingClient
@@ -94,4 +95,70 @@ class SchedulerCrud:
             data_for_method=getting_command_dto.model_dump(mode='json'),
         )
 
+        return JobResponse.model_validate(result)
+
+    def create_job(
+        self, creation_data: RequestCreateJob
+    ) -> JobResponse:
+        """Create a new job using provided data via RPC.
+
+        Args:
+            creation_data (RequestCreateJob): The job creation data.
+
+        Returns:
+            JobResponse: The created job object.
+        """
+        LOG.info('Call service layer on creating new job.')
+
+        creation_command = CreateJobServiceCommandDTO.model_validate(
+            creation_data
+        )
+        result: Dict[str, Any] = self.service_layer_rpc.call(
+            SchedulerServiceLayerManager.create_job.__name__,
+            data_for_method=creation_command.model_dump(mode='json'),
+        )
+
+        return JobResponse.model_validate(result)
+
+    def edit_job(
+        self,
+        job_id: UUID,
+        edit_data: RequestUpdateJob,
+    ) -> JobResponse:
+        """Update an existing job using partial data via RPC.
+
+        Args:
+            job_id (UUID): The ID of the job to update.
+            edit_data (BaseModel): The updated fields for the job.
+
+        Returns:
+            JobResponse: The updated job object.
+        """
+        LOG.info(f'Call service layer on editing job {job_id}.')
+
+        editing_command = UpdateJobServiceCommandDTO(
+            edit_data.model_dump(exclude_none=True)
+        )
+        result: Dict[str, Any] = self.service_layer_rpc.call(
+            SchedulerServiceLayerManager.edit_job.__name__,
+            data_for_method=editing_command.model_dump(mode='json'),
+        )
+        return JobResponse.model_validate(result)
+
+    def delete_job(self, job_id: UUID) -> JobResponse:
+        """Delete a job by its ID via RPC.
+
+        Args:
+            job_id (UUID): The ID of the job to delete.
+
+        Returns:
+            JobResponse: The deleted job object.
+        """
+        LOG.info(f'Call service layer on deleting job {job_id}.')
+
+        deleting_command = DeleteJobServiceCommandDTO(id=job_id)
+        result: Dict[str, Any] = self.service_layer_rpc.call(
+            SchedulerServiceLayerManager.delete_job.__name__,
+            data_for_method=deleting_command.model_dump(mode='json'),
+        )
         return JobResponse.model_validate(result)
