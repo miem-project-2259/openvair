@@ -2,8 +2,10 @@
 
 Defines schemas used as input payloads for scheduler-related API endpoints.
 These models represent user-submitted data for creating, updating,
-and deleting scheduled jobs, including dependency control
-("before" / "after") between tasks.
+and deleting scheduled jobs, including:
+- dependency control ("before" / "after") between tasks
+- validation of command safety
+- validation of cron expression format
 
 Classes:
     - RequestCreateJob
@@ -11,25 +13,32 @@ Classes:
     - RequestDeleteJob
 """
 
+import re
 from uuid import UUID
 from typing import Optional
 from pydantic import Field, field_validator, model_validator
+from crontab import CronSlices
 
 from openvair.common.base_pydantic_models import APIConfigRequestModel
 
 
-class RequestCreateJob(APIConfigRequestModel):
-    """Schema for creating a new scheduled job.
+FORBIDDEN_COMMAND_PATTERNS = [
+    r'\brm\s+-rf\b',
+    r'\bdd\b',
+    r'\bmkfs\b',
+    r'\bcurl\b',
+    r'\bwget\b',
+    r'[;&\[\]\|]',
+]
 
-    Attributes:
-        name (str): Unique name of the job.
-        description (Optional[str]): Description of the job.
-        cron_schedule (str): CRON expression defining job schedule.
-        command (str): Command to execute.
-        enabled (bool): Indicates whether the job is active.
-        before_job_id (Optional[UUID]): Job that must finish before this one starts.
-        after_job_id (Optional[UUID]): Job that should run after this one completes.
-    """
+
+def is_command_forbidden(command: str) -> bool:
+    """Check if command contains forbidden or unsafe patterns."""
+    return any(re.search(pattern, command, re.IGNORECASE) for pattern in FORBIDDEN_COMMAND_PATTERNS)
+
+
+class RequestCreateJob(APIConfigRequestModel):
+    """Schema for creating a new scheduled job."""
 
     name: str = Field(
         ...,
@@ -71,12 +80,40 @@ class RequestCreateJob(APIConfigRequestModel):
         description="If specified, the referenced job will start after this one completes",
     )
 
-    @field_validator("name", "cron_schedule", "command", mode="before")
+    @field_validator("command", mode="before")
     @classmethod
-    def validate_non_empty(cls, value: str) -> str:
-        """Ensure that string fields are not empty or whitespace-only."""
+    def validate_command(cls, value: str) -> str:
+        """Validate command safety and syntax correctness."""
         if not value or not value.strip():
-            raise ValueError("Field cannot be empty or whitespace")
+            raise ValueError("Command cannot be empty or whitespace-only")
+
+        if is_command_forbidden(value):
+            raise ValueError("Command contains forbidden or unsafe operations")
+
+        if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
+            raise ValueError("Command contains invalid characters")
+
+        if not re.search(r'\.sh$', value):
+            raise ValueError("Command must reference a valid script file (e.g., backup.sh)")
+
+        return value.strip()
+
+    @field_validator("cron_schedule", mode="before")
+    @classmethod
+    def validate_cron_schedule(cls, value: str) -> str:
+        """Validate cron expression format using python-crontab."""
+        if not value or not value.strip():
+            raise ValueError("Cron schedule cannot be empty or whitespace")
+        if not CronSlices.is_valid(value.strip()):
+            raise ValueError(f"Invalid cron expression: {value}")
+        return value.strip()
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_non_empty_name(cls, value: str) -> str:
+        """Ensure name field is not empty or whitespace-only."""
+        if not value or not value.strip():
+            raise ValueError("Name cannot be empty or whitespace")
         return value.strip()
 
     @model_validator(mode="after")
@@ -90,17 +127,7 @@ class RequestCreateJob(APIConfigRequestModel):
 
 
 class RequestUpdateJob(APIConfigRequestModel):
-    """Schema for updating an existing scheduled job.
-
-    Attributes:
-        name (Optional[str]): Updated name for the job.
-        description (Optional[str]): Updated description.
-        cron_schedule (Optional[str]): Updated CRON schedule.
-        command (Optional[str]): Updated command.
-        enabled (Optional[bool]): Indicates if the job should be active.
-        before_job_id (Optional[UUID]): Updated dependency before another job.
-        after_job_id (Optional[UUID]): Updated dependency after another job.
-    """
+    """Schema for updating an existing scheduled job."""
 
     name: Optional[str] = Field(
         None,
@@ -141,12 +168,38 @@ class RequestUpdateJob(APIConfigRequestModel):
         description="If specified, the referenced job will start after this one completes",
     )
 
-    @field_validator("name", "cron_schedule", "command", mode="before")
+    @field_validator("command", mode="before")
     @classmethod
-    def validate_optional_non_empty(cls, value: Optional[str]) -> Optional[str]:
-        """Validate optional string fields to ensure they are not just whitespace."""
+    def validate_command(cls, value: Optional[str]) -> Optional[str]:
+        """Validate optional command field for safety and syntax correctness."""
+        if value is None:
+            return value
+        if not value.strip():
+            raise ValueError("Command cannot be only whitespace")
+        if is_command_forbidden(value):
+            raise ValueError("Command contains forbidden or unsafe operations")
+        if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
+            raise ValueError("Command contains invalid characters")
+        if not re.search(r'\.sh$', value):
+            raise ValueError("Command must reference a valid script file (e.g., backup.sh)")
+        return value.strip()
+
+    @field_validator("cron_schedule", mode="before")
+    @classmethod
+    def validate_cron_schedule(cls, value: Optional[str]) -> Optional[str]:
+        """Validate optional cron expression format."""
+        if value is None:
+            return value
+        if not CronSlices.is_valid(value.strip()):
+            raise ValueError(f"Invalid cron expression: {value}")
+        return value.strip()
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_optional_name(cls, value: Optional[str]) -> Optional[str]:
+        """Validate that name, if provided, is not empty or whitespace-only."""
         if value is not None and not value.strip():
-            raise ValueError("Field cannot be only whitespace")
+            raise ValueError("Name cannot be only whitespace")
         return value.strip() if value else value
 
     @model_validator(mode="after")
@@ -160,11 +213,7 @@ class RequestUpdateJob(APIConfigRequestModel):
 
 
 class RequestDeleteJob(APIConfigRequestModel):
-    """Schema for deleting a job by its unique identifier.
-
-    Attributes:
-        job_id (UUID): Unique identifier of the job to delete.
-    """
+    """Schema for deleting a job by its unique identifier."""
 
     job_id: UUID = Field(
         ...,
