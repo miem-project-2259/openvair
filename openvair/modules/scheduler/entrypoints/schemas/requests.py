@@ -20,25 +20,21 @@ from pydantic import Field, field_validator, model_validator
 from crontab import CronSlices
 
 from openvair.common.base_pydantic_models import APIConfigRequestModel
-
-
-FORBIDDEN_COMMAND_PATTERNS = [
-    r'\brm\s+-rf\b',
-    r'\bdd\b',
-    r'\bmkfs\b',
-    r'\bcurl\b',
-    r'\bwget\b',
-    r'[;&\[\]\|]',
-]
-
-
-def is_command_forbidden(command: str) -> bool:
-    """Check if command contains forbidden or unsafe patterns."""
-    return any(re.search(pattern, command, re.IGNORECASE) for pattern in FORBIDDEN_COMMAND_PATTERNS)
+from openvair.modules.scheduler.config import is_command_forbidden
 
 
 class RequestCreateJob(APIConfigRequestModel):
-    """Schema for creating a new scheduled job."""
+    """Schema for creating a new scheduled job.
+
+    Attributes:
+        name (str): Unique name of the job.
+        description (Optional[str]): Description of the job.
+        cron_schedule (str): CRON expression defining job schedule.
+        command (str): Command to execute.
+        enabled (bool): Indicates whether the job is active.
+        before_job_id (Optional[UUID]): Job that must finish before this one starts.
+        after_job_id (Optional[UUID]): Job that should run after this one completes.
+    """
 
     name: str = Field(
         ...,
@@ -127,7 +123,17 @@ class RequestCreateJob(APIConfigRequestModel):
 
 
 class RequestUpdateJob(APIConfigRequestModel):
-    """Schema for updating an existing scheduled job."""
+        """Schema for updating an existing scheduled job.
+
+    Attributes:
+        name (Optional[str]): Updated name for the job.
+        description (Optional[str]): Updated description.
+        cron_schedule (Optional[str]): Updated CRON schedule.
+        command (Optional[str]): Updated command.
+        enabled (Optional[bool]): Indicates if the job should be active.
+        before_job_id (Optional[UUID]): Updated dependency before another job.
+        after_job_id (Optional[UUID]): Updated dependency after another job.
+    """
 
     name: Optional[str] = Field(
         None,
@@ -174,15 +180,16 @@ class RequestUpdateJob(APIConfigRequestModel):
         """Validate optional command field for safety and syntax correctness."""
         if value is None:
             return value
-        if not value.strip():
+        value = value.strip()
+        if not value:
             raise ValueError("Command cannot be only whitespace")
         if is_command_forbidden(value):
             raise ValueError("Command contains forbidden or unsafe operations")
         if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
             raise ValueError("Command contains invalid characters")
-        if not re.search(r'\.sh$', value):
-            raise ValueError("Command must reference a valid script file (e.g., backup.sh)")
-        return value.strip()
+
+        return value
+
 
     @field_validator("cron_schedule", mode="before")
     @classmethod
@@ -213,7 +220,11 @@ class RequestUpdateJob(APIConfigRequestModel):
 
 
 class RequestDeleteJob(APIConfigRequestModel):
-    """Schema for deleting a job by its unique identifier."""
+    """Schema for deleting a job by its unique identifier.
+
+    Attributes:
+        job_id (UUID): Unique identifier of the job to delete.
+    """
 
     job_id: UUID = Field(
         ...,
