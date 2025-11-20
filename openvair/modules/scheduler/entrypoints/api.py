@@ -32,13 +32,7 @@ from openvair.common.schemas import BaseResponse
 from openvair.libs.auth.jwt_utils import get_current_user
 from openvair.modules.scheduler.entrypoints.schemas.requests import RequestCreateJob, RequestUpdateJob
 from openvair.modules.scheduler.entrypoints.schemas.responses import JobListResponse, JobResponse
-from openvair.modules.template.entrypoints.schemas.requests import (
-    RequestEditTemplate,
-    RequestCreateTemplate,
-)
-from openvair.modules.template.entrypoints.schemas.responses import (
-    TemplateResponse,
-)
+
 
 LOG = get_logger(__name__)
 router = APIRouter(
