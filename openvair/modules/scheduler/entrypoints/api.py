@@ -24,15 +24,20 @@ from typing import List
 
 from fastapi import Depends, APIRouter, status
 from fastapi_pagination import Page, Params, paginate
-from openvair.modules.scheduler.entrypoints.crud import SchedulerCrud
 from starlette.concurrency import run_in_threadpool
 
 from openvair.libs.log import get_logger
 from openvair.common.schemas import BaseResponse
 from openvair.libs.auth.jwt_utils import get_current_user
-from openvair.modules.scheduler.entrypoints.schemas.requests import RequestCreateJob, RequestUpdateJob
-from openvair.modules.scheduler.entrypoints.schemas.responses import JobListResponse, JobResponse
-
+from openvair.modules.scheduler.entrypoints.crud import SchedulerCrud
+from openvair.modules.scheduler.entrypoints.schemas.requests import (
+    RequestCreateJob,
+    RequestUpdateJob,
+)
+from openvair.modules.scheduler.entrypoints.schemas.responses import (
+    JobResponse,
+    JobListResponse,
+)
 
 LOG = get_logger(__name__)
 router = APIRouter(

@@ -1,5 +1,10 @@
-from typing import Optional
+"""DTOs for internal service-layer command operations.
+
+This module provides command objects used to describe service and domain-level
+operations on schedulers`s jobs (create, edit, delete).
+"""
 from uuid import UUID
+from typing import Optional
 
 from openvair.common.base_pydantic_models import BaseDTOModel
 
@@ -25,8 +30,10 @@ class CreateJobServiceCommandDTO(BaseDTOModel):
         cron_schedule (str): CRON expression defining job schedule.
         command (str): Command to execute.
         enabled (bool): Indicates whether the job is active.
-        before_job_id (Optional[UUID]): Job that must finish before this one starts.
-        after_job_id (Optional[UUID]): Job that should run after this one completes.
+        before_job_id (Optional[UUID]): Job that must finish before
+        this one starts.
+        after_job_id (Optional[UUID]): Job that should run after
+        this one completes.
     """
 
     name: str
@@ -36,7 +43,7 @@ class CreateJobServiceCommandDTO(BaseDTOModel):
     enabled: bool
     before_job_id: UUID
     after_job_id: UUID
-    
+
 
 class UpdateJobServiceCommandDTO(BaseDTOModel):
     """DTO for updating job fields at the service layer.

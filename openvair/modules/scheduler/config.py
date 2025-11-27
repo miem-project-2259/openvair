@@ -12,4 +12,10 @@ FORBIDDEN_COMMAND_PATTERNS = [
 
 def is_command_forbidden(command: str) -> bool:
     """Check if command contains forbidden or unsafe patterns."""
-    return any(re.search(pattern, command, re.IGNORECASE) for pattern in FORBIDDEN_COMMAND_PATTERNS)
+    return any(
+        re.search(
+            pattern,
+            command,
+            re.IGNORECASE
+        ) for pattern in FORBIDDEN_COMMAND_PATTERNS
+    )

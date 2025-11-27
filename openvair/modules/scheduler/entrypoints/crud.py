@@ -18,17 +18,22 @@ from uuid import UUID
 from typing import Any, Dict, List
 
 from openvair.libs.log import get_logger
-from openvair.modules.scheduler.adapters.dto.internal.commands import (
-    CreateJobServiceCommandDTO,
-    DeleteJobServiceCommandDTO, 
-    GetJobServiceCommandDTO, 
-    UpdateJobServiceCommandDTO
-)
-from openvair.modules.scheduler.entrypoints.schemas.requests import RequestCreateJob, RequestUpdateJob
-from openvair.modules.scheduler.entrypoints.schemas.responses import JobListResponse, JobResponse
 from openvair.modules.template.config import API_SERVICE_LAYER_QUEUE_NAME
 from openvair.libs.messaging.messaging_agents import MessagingClient
-
+from openvair.modules.scheduler.entrypoints.schemas.requests import (
+    RequestCreateJob,
+    RequestUpdateJob,
+)
+from openvair.modules.scheduler.entrypoints.schemas.responses import (
+    JobResponse,
+    JobListResponse,
+)
+from openvair.modules.scheduler.adapters.dto.internal.commands import (
+    GetJobServiceCommandDTO,
+    CreateJobServiceCommandDTO,
+    DeleteJobServiceCommandDTO,
+    UpdateJobServiceCommandDTO,
+)
 
 LOG = get_logger(__name__)
 

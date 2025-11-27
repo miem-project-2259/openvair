@@ -16,11 +16,12 @@ Classes:
 import re
 from uuid import UUID
 from typing import Optional
-from pydantic import Field, field_validator, model_validator
-from crontab import CronSlices
 
-from openvair.common.base_pydantic_models import APIConfigRequestModel
+from crontab import CronSlices
+from pydantic import Field, field_validator, model_validator
+
 from openvair.modules.scheduler.config import is_command_forbidden
+from openvair.common.base_pydantic_models import APIConfigRequestModel
 
 
 class RequestCreateJob(APIConfigRequestModel):
@@ -32,8 +33,10 @@ class RequestCreateJob(APIConfigRequestModel):
         cron_schedule (str): CRON expression defining job schedule.
         command (str): Command to execute.
         enabled (bool): Indicates whether the job is active.
-        before_job_id (Optional[UUID]): Job that must finish before this one starts.
-        after_job_id (Optional[UUID]): Job that should run after this one completes.
+        before_job_id (Optional[UUID]): Job that must finish before
+        this one starts.
+        after_job_id (Optional[UUID]): Job that should run after
+        this one completes.
     """
 
     name: str = Field(
@@ -68,12 +71,18 @@ class RequestCreateJob(APIConfigRequestModel):
     before_job_id: Optional[UUID] = Field(
         None,
         examples=["c1b65a20-5b29-4b1d-8c1c-8c41cb47d111"],
-        description="If specified, this job will start only after the referenced job finishes",
+        description=(
+            "If specified, this job will start only after "
+            "the referenced job finishes"
+        ),
     )
     after_job_id: Optional[UUID] = Field(
         None,
         examples=["f9d3a511-d3b4-4f4b-9287-4cbf3e6f49de"],
-        description="If specified, the referenced job will start after this one completes",
+        description=(
+            "If specified, the referenced job will "
+            "start after this one completes"
+        ),
     )
 
     @field_validator("command", mode="before")
@@ -81,16 +90,20 @@ class RequestCreateJob(APIConfigRequestModel):
     def validate_command(cls, value: str) -> str:
         """Validate command safety and syntax correctness."""
         if not value or not value.strip():
-            raise ValueError("Command cannot be empty or whitespace-only")
+            msg = "Command cannot be empty or whitespace-only"
+            raise ValueError(msg)
 
         if is_command_forbidden(value):
-            raise ValueError("Command contains forbidden or unsafe operations")
+            msg = "Command contains forbidden or unsafe operations"
+            raise ValueError(msg)
 
         if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
-            raise ValueError("Command contains invalid characters")
+            msg = "Command contains invalid characters"
+            raise ValueError(msg)
 
         if not re.search(r'\.sh$', value):
-            raise ValueError("Command must reference a valid script file (e.g., backup.sh)")
+            msg = "Command must reference a valid script file (e.g., backup.sh)"
+            raise ValueError(msg)
 
         return value.strip()
 
@@ -99,9 +112,11 @@ class RequestCreateJob(APIConfigRequestModel):
     def validate_cron_schedule(cls, value: str) -> str:
         """Validate cron expression format using python-crontab."""
         if not value or not value.strip():
-            raise ValueError("Cron schedule cannot be empty or whitespace")
+            msg = "Cron schedule cannot be empty or whitespace"
+            raise ValueError(msg)
         if not CronSlices.is_valid(value.strip()):
-            raise ValueError(f"Invalid cron expression: {value}")
+            msg = f"Invalid cron expression: {value}"
+            raise ValueError(msg)
         return value.strip()
 
     @field_validator("name", mode="before")
@@ -109,21 +124,27 @@ class RequestCreateJob(APIConfigRequestModel):
     def validate_non_empty_name(cls, value: str) -> str:
         """Ensure name field is not empty or whitespace-only."""
         if not value or not value.strip():
-            raise ValueError("Name cannot be empty or whitespace")
+            msg = "Name cannot be empty or whitespace"
+            raise ValueError(msg)
         return value.strip()
 
     @model_validator(mode="after")
     def check_dependency_conflicts(self) -> "RequestCreateJob":
-        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
+        """Ensure that both before_job_id and after_job_id
+
+        are not set simultaneously.
+        """
         if self.before_job_id and self.after_job_id:
-            raise ValueError(
-                "Cannot specify both before_job_id and after_job_id for the same job."
+            msg = (
+                "Cannot specify both before_job_id "
+                "and after_job_id for the same job."
             )
+            raise ValueError(msg)
         return self
 
 
 class RequestUpdateJob(APIConfigRequestModel):
-        """Schema for updating an existing scheduled job.
+    """Schema for updating an existing scheduled job.
 
     Attributes:
         name (Optional[str]): Updated name for the job.
@@ -166,12 +187,18 @@ class RequestUpdateJob(APIConfigRequestModel):
     before_job_id: Optional[UUID] = Field(
         None,
         examples=["d2c43a22-4e34-4e7f-9a3a-0af733d9a122"],
-        description="If specified, this job will start only after the referenced job finishes",
+        description=(
+            "If specified, this job will start only after "
+            "the referenced job finishes"
+        ),
     )
     after_job_id: Optional[UUID] = Field(
         None,
         examples=["a9b51a12-bd31-4fa3-9523-f7e4b8e3d321"],
-        description="If specified, the referenced job will start after this one completes",
+        description=(
+            "If specified, the referenced job will "
+            "start after this one completes"
+        ),
     )
 
     @field_validator("command", mode="before")
@@ -182,11 +209,14 @@ class RequestUpdateJob(APIConfigRequestModel):
             return value
         value = value.strip()
         if not value:
-            raise ValueError("Command cannot be only whitespace")
+            msg = "Command cannot be only whitespace"
+            raise ValueError
         if is_command_forbidden(value):
-            raise ValueError("Command contains forbidden or unsafe operations")
+            msg = "Command contains forbidden or unsafe operations"
+            raise ValueError(msg)
         if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
-            raise ValueError("Command contains invalid characters")
+            msg = "Command contains invalid characters"
+            raise ValueError(msg)
 
         return value
 
@@ -198,7 +228,8 @@ class RequestUpdateJob(APIConfigRequestModel):
         if value is None:
             return value
         if not CronSlices.is_valid(value.strip()):
-            raise ValueError(f"Invalid cron expression: {value}")
+            msg = f"Invalid cron expression: {value}"
+            raise ValueError(msg)
         return value.strip()
 
     @field_validator("name", mode="before")
@@ -206,16 +237,22 @@ class RequestUpdateJob(APIConfigRequestModel):
     def validate_optional_name(cls, value: Optional[str]) -> Optional[str]:
         """Validate that name, if provided, is not empty or whitespace-only."""
         if value is not None and not value.strip():
-            raise ValueError("Name cannot be only whitespace")
+            msg = "Name cannot be only whitespace"
+            raise ValueError(msg)
         return value.strip() if value else value
 
     @model_validator(mode="after")
     def check_dependency_conflicts(self) -> "RequestUpdateJob":
-        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
+        """Validate that job dependencies do not conflict.
+
+        Both before_job_id and after_job_id cannot be set simultaneously.
+        """
         if self.before_job_id and self.after_job_id:
-            raise ValueError(
-                "Cannot specify both before_job_id and after_job_id for the same job."
+            msg = (
+                "Cannot specify both before_job_id and after_job_id "
+                "for the same job."
             )
+            raise ValueError(msg)
         return self
 
 
