@@ -18,9 +18,11 @@ from openvair.modules.scheduler.domain.exception import (
 )
 from openvair.modules.scheduler.entrypoints.schemas.requests import (
     RequestCreateJob,
+    RequestUpdateJob,
 )
 from openvair.modules.scheduler.entrypoints.schemas.responses import (
     JobCreateResponse,
+    JobResponse
 )
 
 LOG = get_logger(__name__)
@@ -30,7 +32,6 @@ class CronJobScheduler(BaseScheduler):
     def __init__(self, cron_obj: CronTab) -> None:
         super().__init__(cron_obj)
 
-    @override
     def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
         try:
             req = RequestCreateJob.model_validate(creation_data)
@@ -56,15 +57,35 @@ class CronJobScheduler(BaseScheduler):
             LOG.error(f'Failed to create a scheduled task: {error}')
             raise
 
-    @override
     def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]:
         try:
+            req = RequestUpdateJob.model_validate(editing_data)
             with self._cron:
-                for k, upd_data in editing_data:
-                    job = self._job(k)
-                    self._upd_job(job, upd_data)
+                job = self._job(str(req.job_id))
+                if req.command:
+                    job.set_command(req.command)
+                if req.description:
+                    job.set_comment(req.description)
+                if req.cron_schedule:
+                    job.setall(req.cron_schedule)
 
-            return {}
+                # TODO recreate job if before is set
+
+                resp = JobResponse(
+                    id=req.job_id,
+                    name="",
+                    description=job.comment,
+                    cron_schedule=str(job.slices),
+                    command=job.command,
+                    enabled=job.is_enabled(),
+                    # TODO grab job ids
+                    before_job_id=None,
+                    after_job_id=None,
+                    # TODO add rest
+                )
+
+            return resp
+
         except SchedulerDomainException as error:
             LOG.error(f'Failed to edit scheduled tasks: {error}')
             raise
