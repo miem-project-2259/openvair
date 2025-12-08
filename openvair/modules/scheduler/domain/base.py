@@ -6,7 +6,7 @@ It declares the required interface and shared fields for managing scheduled task
 """
 
 import abc
-from typing import Any, Dict, List
+from typing import Any
 
 from crontab import CronTab, CronItem
 
@@ -22,27 +22,27 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         self.jobs: dict[str, CronItem] = {}
 
     @abc.abstractmethod
-    def create(self, creation_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:
         """Create a scheduled task.
 
         Args:
-            creation_data (Dict[str, Any]): Data required for task creation,
+            creation_data (dict[str, Any]): Data required for task creation,
                 e.g., {'schedule': '0 0 * * *', 'command': '/bin/true', 'comment': 'my-job-id'}.
 
         Returns:
-            Dict[str, Any]: A dictionary representation of the created task.
+            dict[str, Any]: A dictionary representation of the created task.
         """
         ...
 
     @abc.abstractmethod
-    def get(self, job_id: str) -> Dict[str, Any]:
+    def get(self, job_id: str) -> dict[str, Any]:
         """Retrieve a single scheduled task by its unique identifier.
 
         Args:
             job_id (str): The unique identifier (e.g., comment) of the task.
 
         Returns:
-            Dict[str, Any]: A dictionary representation of the found task.
+            dict[str, Any]: A dictionary representation of the found task.
 
         Raises:
             CronJobNotFound: If a task with the given ID is not found.
@@ -50,24 +50,24 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def list_all(self) -> List[Dict[str, Any]]:
+    def list_all(self) -> list[dict[str, Any]]:
         """Retrieve all scheduled tasks managed by this scheduler.
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries, where each dictionary
+            list[dict[str, Any]]: A list of dictionaries, where each dictionary
             represents a scheduled task.
         """
         ...
 
     @abc.abstractmethod
-    def edit(self, editing_data: Dict[str, Any]) -> Dict[str, Any]:
+    def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]:
         """Edit a scheduled task.
 
         Args:
-            editing_data (Dict[str, Any]): New data for the task.
+            editing_data (dict[str, Any]): New data for the task.
 
         Returns:
-            Dict[str, Any]: A dictionary representation of the updated task.
+            dict[str, Any]: A dictionary representation of the updated task.
 
         Raises:
             CronJobNotFound: If a task with the given ID is not found.
