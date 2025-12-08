@@ -6,9 +6,19 @@ It declares the required interface and shared fields for managing scheduled task
 """
 
 import abc
-from typing import Any
+import datetime
+from typing import Any, Optional
 
 from crontab import CronTab, CronItem
+from pydantic import BaseModel, Field
+
+
+class JobMetadata(BaseModel):
+    cron_item: CronItem
+    name: str
+    created_at: datetime.datetime
+    updated_at: Optional[datetime.datetime] = Field(None)
+
 
 class BaseScheduler(metaclass=abc.ABCMeta):
     """Abstract base class for scheduler domain models.
@@ -17,9 +27,10 @@ class BaseScheduler(metaclass=abc.ABCMeta):
     creation, editing, deletion, and retrieval of scheduled tasks (cron jobs).
     Concrete implementations must implement all abstract methods.
     """
+
     def __init__(self, cron_obj: CronTab) -> None:
         self._cron = cron_obj
-        self.jobs: dict[str, CronItem] = {}
+        self.jobs: dict[str, JobMetadata] = {}
 
     @abc.abstractmethod
     def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:
