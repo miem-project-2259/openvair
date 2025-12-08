@@ -100,19 +100,11 @@ class CronJobScheduler(BaseScheduler):
         try:
             job = self._job(job_id)
             with self._cron as cron:
-                cron.remove(job)
-            self.jobs[job_id].delete()
+                cron.remove(job.cron_item)
+            del self.jobs[job_id]
         except SchedulerDomainException as error:
             LOG.error(f'Failed to delete scheduled task: {error}')
             raise
-
-    @classmethod
-    def _upd_job(cls, job: CronItem, data: dict[str, Any]) -> None:
-        job.command = data.get('command')
-        job.comment = data.get('comment')
-        job.user = data.get('user')
-        job.pre_comment = data.get('pre_comment')
-        job.setall(data.get('schedule'))
 
     def _job(self, key: str) -> JobMetadata:
         if key not in self.jobs:
