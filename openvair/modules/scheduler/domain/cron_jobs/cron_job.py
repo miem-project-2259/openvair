@@ -4,6 +4,7 @@ This module defines the `CronJobScheduler` concrete class that allows for
 management of cron jobs
 """
 
+import datetime
 from typing import Any
 from typing_extensions import override
 import uuid
@@ -11,7 +12,7 @@ import uuid
 from crontab import CronTab, CronItem
 
 from openvair.libs.log import get_logger
-from openvair.modules.scheduler.domain.base import BaseScheduler
+from openvair.modules.scheduler.domain.base import BaseScheduler, JobMetadata
 from openvair.modules.scheduler.domain.exception import (
     SchedulerDomainException,
     CronJobNotFound,
@@ -48,7 +49,7 @@ class CronJobScheduler(BaseScheduler):
                 )
                 job.setall(req.cron_schedule)
                 job_id = uuid.uuid4()
-                self.jobs[str(job_id)] = job
+                self.jobs[str(job_id)] = JobMetadata(cron_item=job, name=req.name, created_at=datetime.datetime.now())
 
             resp = JobCreateResponse(job_id=job_id)
             return resp.model_dump()
@@ -63,28 +64,33 @@ class CronJobScheduler(BaseScheduler):
             with self._cron:
                 job = self._job(str(req.job_id))
                 if req.command:
-                    job.set_command(req.command)
+                    job.cron_item.set_command(req.command)
                 if req.description:
-                    job.set_comment(req.description)
+                    job.cron_item.set_comment(req.description)
                 if req.cron_schedule:
-                    job.setall(req.cron_schedule)
+                    job.cron_item.setall(req.cron_schedule)
 
+                job.updated_at = datetime.datetime.now()
                 # TODO recreate job if before is set
 
                 resp = JobResponse(
-                    id=req.job_id,
+                    id=uuid.UUID(req.job_id),
                     name="",
-                    description=job.comment,
-                    cron_schedule=str(job.slices),
-                    command=job.command,
-                    enabled=job.is_enabled(),
+                    description=job.cron_item.comment,
+                    cron_schedule=str(job.cron_item.slices),
+                    command=job.cron_item.command or "",
+                    enabled=job.cron_item.is_enabled(),
                     # TODO grab job ids
                     before_job_id=None,
                     after_job_id=None,
+                    created_at=job.created_at,
+                    updated_at=job.updated_at,
                     # TODO add rest
+                    last_run=None,
+                    next_run=None
                 )
 
-            return resp
+            return resp.model_dump()
 
         except SchedulerDomainException as error:
             LOG.error(f'Failed to edit scheduled tasks: {error}')
@@ -108,7 +114,7 @@ class CronJobScheduler(BaseScheduler):
         job.pre_comment = data.get('pre_comment')
         job.setall(data.get('schedule'))
 
-    def _job(self, key: str) -> CronItem:
+    def _job(self, key: str) -> JobMetadata:
         if key not in self.jobs:
             raise CronJobNotFound(key)
         return self.jobs[key]
