@@ -8,6 +8,7 @@ It declares the required interface and shared fields for managing scheduled task
 import abc
 import datetime
 from typing import Any, Optional
+from uuid import UUID
 
 from crontab import CronTab, CronItem
 from pydantic import BaseModel, Field
@@ -17,7 +18,9 @@ class JobMetadata(BaseModel):
     cron_item: CronItem
     name: str
     created_at: datetime.datetime
-    updated_at: Optional[datetime.datetime] = Field(None)
+    updated_at: Optional[datetime.datetime] = Field(default=None)
+    previous_id: UUID | None = Field(default=None)
+    next_id: UUID | None = Field(default=None)
 
 
 class BaseScheduler(metaclass=abc.ABCMeta):

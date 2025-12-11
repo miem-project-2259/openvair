@@ -37,18 +37,24 @@ class CronJobScheduler(BaseScheduler):
         try:
             req = RequestCreateJob.model_validate(creation_data)
             with self._cron as cron:
+                job_id = uuid.uuid4()
+                next_id = None
+
                 if req.before_job_id:
-                    before_cmd = self._job(str(req.before_job_id)).cron_item.command
+                    next_id = req.before_job_id
+
+                    before_job = self._job(str(next_id))
+                    before_job.previous_id = job_id
+                    before_job_cron = before_job.cron_item
                 else:
-                    before_cmd = None
+                    before_job_cron = None
 
                 job = cron.new(
                     command=req.command,
                     comment=req.description or '',
-                    before=before_cmd,
+                    before=before_job_cron,
                 )
                 job.setall(req.cron_schedule)
-                job_id = uuid.uuid4()
                 self.jobs[str(job_id)] = JobMetadata(cron_item=job, name=req.name, created_at=datetime.datetime.now(), updated_at=None)
 
             resp = JobCreateResponse(job_id=job_id)
