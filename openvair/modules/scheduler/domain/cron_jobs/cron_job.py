@@ -38,7 +38,7 @@ class CronJobScheduler(BaseScheduler):
             req = RequestCreateJob.model_validate(creation_data)
             with self._cron as cron:
                 if req.before_job_id:
-                    before_cmd = self._job(str(req.before_job_id)).command
+                    before_cmd = self._job(str(req.before_job_id)).cron_item.command
                 else:
                     before_cmd = None
 
@@ -49,7 +49,7 @@ class CronJobScheduler(BaseScheduler):
                 )
                 job.setall(req.cron_schedule)
                 job_id = uuid.uuid4()
-                self.jobs[str(job_id)] = JobMetadata(cron_item=job, name=req.name, created_at=datetime.datetime.now())
+                self.jobs[str(job_id)] = JobMetadata(cron_item=job, name=req.name, created_at=datetime.datetime.now(), updated_at=None)
 
             resp = JobCreateResponse(job_id=job_id)
             return resp.model_dump()
@@ -69,13 +69,17 @@ class CronJobScheduler(BaseScheduler):
                     job.cron_item.set_comment(req.description)
                 if req.cron_schedule:
                     job.cron_item.setall(req.cron_schedule)
+                if req.command:
+                    job.cron_item.command = req.command
+                if req.name:
+                    job.name = req.name
 
                 job.updated_at = datetime.datetime.now()
                 # TODO recreate job if before is set
 
                 resp = JobResponse(
                     id=uuid.UUID(req.job_id),
-                    name="",
+                    name=job.name,
                     description=job.cron_item.comment,
                     cron_schedule=str(job.cron_item.slices),
                     command=job.cron_item.command or "",
