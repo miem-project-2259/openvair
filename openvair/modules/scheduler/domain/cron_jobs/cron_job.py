@@ -4,6 +4,7 @@ This module defines the `CronJobScheduler` concrete class that allows for
 management of cron jobs
 """
 
+import copy
 import datetime
 from typing import Any
 from typing_extensions import override
@@ -23,7 +24,7 @@ from openvair.modules.scheduler.entrypoints.schemas.requests import (
 )
 from openvair.modules.scheduler.entrypoints.schemas.responses import (
     JobCreateResponse,
-    JobResponse
+    JobResponse,
 )
 
 LOG = get_logger(__name__)
@@ -33,29 +34,42 @@ class CronJobScheduler(BaseScheduler):
     def __init__(self, cron_obj: CronTab) -> None:
         super().__init__(cron_obj)
 
+    def __assign_job_before(
+        self, target_uuid: uuid.UUID, before_uuid: uuid.UUID
+    ) -> None:
+        with self._cron as cron:
+            job = self._job(str(target_uuid))
+
+    def __create_job(self, req: RequestCreateJob) -> CronItem:
+        with self._cron as cron:
+            job = cron.new(
+                command=req.command,
+                comment=req.description or '',
+                before=str(req.before_job_id or ''),
+            )
+            job.setall(req.cron_schedule)
+        return job
+
     def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
         try:
             req = RequestCreateJob.model_validate(creation_data)
-            with self._cron as cron:
-                job_id = uuid.uuid4()
-                next_id = None
+            job_id = uuid.uuid4()
+            next_id = None
 
-                if req.before_job_id:
-                    next_id = req.before_job_id
+            if req.before_job_id:
+                next_id = req.before_job_id
+                before_job = self._job(str(next_id))
+                before_job.previous_id = job_id
 
-                    before_job = self._job(str(next_id))
-                    before_job.previous_id = job_id
-                    before_job_cron = before_job.cron_item
-                else:
-                    before_job_cron = None
+            cron_job = self.__create_job(req)
 
-                job = cron.new(
-                    command=req.command,
-                    comment=req.description or '',
-                    before=before_job_cron,
-                )
-                job.setall(req.cron_schedule)
-                self.jobs[str(job_id)] = JobMetadata(cron_item=job, name=req.name, created_at=datetime.datetime.now(), updated_at=None)
+            self.jobs[str(job_id)] = JobMetadata(
+                cron_item=cron_job,
+                name=req.name,
+                created_at=datetime.datetime.now(),
+                updated_at=None,
+                next_id=next_id,
+            )
 
             resp = JobCreateResponse(job_id=job_id)
             return resp.model_dump()
@@ -67,8 +81,11 @@ class CronJobScheduler(BaseScheduler):
     def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]:
         try:
             req = RequestUpdateJob.model_validate(editing_data)
-            with self._cron:
+            with self._cron as cron:
                 job = self._job(str(req.job_id))
+
+                job.updated_at = datetime.datetime.now()
+
                 if req.command:
                     job.cron_item.set_command(req.command)
                 if req.description:
@@ -80,7 +97,20 @@ class CronJobScheduler(BaseScheduler):
                 if req.name:
                     job.name = req.name
 
-                job.updated_at = datetime.datetime.now()
+                if req.before_job_id:
+                    cron.remove(job.cron_item)
+                    req = RequestCreateJob(
+                        name=job.name,
+                        description=job.cron_item.comment,
+                        cron_schedule=str(job.cron_item.slices),
+                        command=job.cron_item.command,
+                        before_job_id=req.before_job_id,
+                        after_job_id=None
+                    )
+
+                    new_job = self.__create_job(req)
+                    job.cron_item = new_job
+
                 job_schedule = job.cron_item.schedule()
 
                 # TODO recreate job if before is set
@@ -90,7 +120,7 @@ class CronJobScheduler(BaseScheduler):
                     name=job.name,
                     description=job.cron_item.comment,
                     cron_schedule=str(job.cron_item.slices),
-                    command=job.cron_item.command or "",
+                    command=job.cron_item.command or '',
                     enabled=job.cron_item.is_enabled(),
                     # TODO grab job ids
                     before_job_id=None,
@@ -99,7 +129,7 @@ class CronJobScheduler(BaseScheduler):
                     updated_at=job.updated_at,
                     # TODO add rest
                     last_run=job_schedule.get_last(),
-                    next_run=job_schedule.get_next()
+                    next_run=job_schedule.get_next(),
                 )
 
             return resp.model_dump()
