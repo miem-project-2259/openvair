@@ -10,16 +10,9 @@ from typing import ClassVar, Dict, cast
 from crontab import CronTab
 from pydantic import BaseModel, Field
 
-# from openvair.modules.scheduler.adapters.dto.internal.models import DomainSchedulerModelDTO
+from openvair.modules.scheduler.adapters.dto.internal.models import DomainSchedulerModelDTO
 from openvair.modules.scheduler.domain.base import BaseScheduler
 from openvair.modules.scheduler.domain.cron_jobs.cron_job import CronJobScheduler
-
-
-class DomainSchedulerModelDTO(BaseModel):
-    """Заглушка"""
-
-    scheduler_type: str = Field(..., alias="type")
-    user: str | None = None
 
 
 class AbstractSchedulerFactory(metaclass=abc.ABCMeta):
