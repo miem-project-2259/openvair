@@ -31,12 +31,6 @@ class CronJobScheduler(BaseScheduler):
     def __init__(self, cron_obj: CronTab) -> None:
         super().__init__(cron_obj)
 
-    def __assign_job_before(
-        self, target_uuid: uuid.UUID, before_uuid: uuid.UUID
-    ) -> None:
-        with self._cron as cron:
-            job = self._job(str(target_uuid))
-
     def __create_job(self, req: RequestCreateJob) -> CronItem:
         with self._cron as cron:
             job = cron.new(
