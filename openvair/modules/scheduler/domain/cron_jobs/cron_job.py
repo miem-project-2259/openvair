@@ -36,6 +36,7 @@ class CronJobScheduler(BaseScheduler):
             job = cron.new(
                 command=req.command,
                 comment=req.description or '',
+                # FIX this should be job item
                 before=str(req.before_job_id or ''),
             )
             job.setall(req.cron_schedule)
@@ -83,8 +84,6 @@ class CronJobScheduler(BaseScheduler):
                     job.cron_item.set_comment(req.description)
                 if req.cron_schedule:
                     job.cron_item.setall(req.cron_schedule)
-                if req.command:
-                    job.cron_item.command = req.command
                 if req.name:
                     job.name = req.name
 
@@ -111,10 +110,9 @@ class CronJobScheduler(BaseScheduler):
                     name=job.name,
                     description=job.cron_item.comment,
                     cron_schedule=str(job.cron_item.slices),
-                    command=job.cron_item.command or '',
+                    command=job.cron_item.command,
                     enabled=job.cron_item.is_enabled(),
-                    # TODO grab job ids
-                    before_job_id=None,
+                    before_job_id=job.next_id,
                     after_job_id=None,
                     created_at=job.created_at,
                     updated_at=job.updated_at,
