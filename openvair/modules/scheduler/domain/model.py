@@ -5,14 +5,16 @@ factories based on scheduler types
 """
 
 import abc
-from typing import ClassVar, Dict, cast
+from typing import Dict, ClassVar, cast
 
 from crontab import CronTab
-from pydantic import BaseModel, Field
+from pydantic import Field, BaseModel
 
 # from openvair.modules.scheduler.adapters.dto.internal.models import DomainSchedulerModelDTO
 from openvair.modules.scheduler.domain.base import BaseScheduler
-from openvair.modules.scheduler.domain.cron_jobs.cron_job import CronJobScheduler
+from openvair.modules.scheduler.domain.cron_jobs.cron_job import (
+    CronJobScheduler,
+)
 
 
 class DomainSchedulerModelDTO(BaseModel):

@@ -5,7 +5,7 @@ within the domain layer.
 """
 
 from openvair.modules.scheduler.shared.base_exceptions import (
-    SchedulerDomainException
+    SchedulerDomainException,
 )
 
 

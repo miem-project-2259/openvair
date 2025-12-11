@@ -4,18 +4,15 @@ This module defines the `CronJobScheduler` concrete class that allows for
 management of cron jobs
 """
 
-import copy
+import uuid
 import datetime
 from typing import Any
-from typing_extensions import override
-import uuid
 
 from crontab import CronTab, CronItem
 
 from openvair.libs.log import get_logger
-from openvair.modules.scheduler.domain.base import BaseScheduler, JobMetadata
+from openvair.modules.scheduler.domain.base import JobMetadata, BaseScheduler
 from openvair.modules.scheduler.domain.exception import (
-    SchedulerDomainException,
     CronJobNotFound,
 )
 from openvair.modules.scheduler.entrypoints.schemas.requests import (
@@ -23,8 +20,8 @@ from openvair.modules.scheduler.entrypoints.schemas.requests import (
     RequestUpdateJob,
 )
 from openvair.modules.scheduler.entrypoints.schemas.responses import (
-    JobCreateResponse,
     JobResponse,
+    JobCreateResponse,
 )
 
 LOG = get_logger(__name__)
@@ -105,7 +102,7 @@ class CronJobScheduler(BaseScheduler):
                         cron_schedule=str(job.cron_item.slices),
                         command=job.cron_item.command,
                         before_job_id=req.before_job_id,
-                        after_job_id=None
+                        after_job_id=None,
                     )
 
                     new_job = self.__create_job(req)

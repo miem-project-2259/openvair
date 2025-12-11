@@ -7,11 +7,11 @@ It declares the required interface and shared fields for managing scheduled task
 
 import abc
 import datetime
-from typing import Any, Optional
 from uuid import UUID
+from typing import Any, Optional
 
 from crontab import CronTab, CronItem
-from pydantic import BaseModel, Field
+from pydantic import Field, BaseModel
 
 
 class JobMetadata(BaseModel):
