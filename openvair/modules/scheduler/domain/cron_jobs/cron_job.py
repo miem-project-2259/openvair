@@ -75,6 +75,8 @@ class CronJobScheduler(BaseScheduler):
                     job.name = req.name
 
                 job.updated_at = datetime.datetime.now()
+                job_schedule = job.cron_item.schedule()
+
                 # TODO recreate job if before is set
 
                 resp = JobResponse(
@@ -90,8 +92,8 @@ class CronJobScheduler(BaseScheduler):
                     created_at=job.created_at,
                     updated_at=job.updated_at,
                     # TODO add rest
-                    last_run=None,
-                    next_run=None
+                    last_run=job_schedule.get_last(),
+                    next_run=job_schedule.get_next()
                 )
 
             return resp.model_dump()
