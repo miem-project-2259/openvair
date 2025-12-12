@@ -23,6 +23,9 @@ from openvair.modules.scheduler.entrypoints.schemas.responses import (
     JobResponse,
     JobCreateResponse,
 )
+from openvair.modules.scheduler.shared.base_exceptions import (
+    SchedulerDomainException,
+)
 
 LOG = get_logger(__name__)
 
@@ -74,7 +77,7 @@ class CronJobScheduler(BaseScheduler):
         try:
             req = RequestUpdateJob.model_validate(editing_data)
             with self._cron as cron:
-                job = self._job(str(req.job_id))
+                job = self._job(req.job_id)
 
                 job.updated_at = datetime.datetime.now()
 
@@ -89,7 +92,7 @@ class CronJobScheduler(BaseScheduler):
 
                 if req.before_job_id:
                     cron.remove(job.cron_item)
-                    req = RequestCreateJob(
+                    c_req = RequestCreateJob(
                         name=job.name,
                         description=job.cron_item.comment,
                         cron_schedule=str(job.cron_item.slices),
@@ -98,15 +101,28 @@ class CronJobScheduler(BaseScheduler):
                         after_job_id=None,
                     )
 
-                    new_job = self.__create_job(req)
+                    new_job = self.__create_job(c_req)
                     job.cron_item = new_job
 
+                job_schedule = job.cron_item.schedule()
+
+                return self.get(str(req.job_id))
+
+        except SchedulerDomainException as error:
+            LOG.error(f'Failed to edit scheduled tasks: {error}')
+            raise
+
+    def get(self, job_id: str) -> dict[str, Any]:
+        try:
+            with self._cron:
+                job_uuid = uuid.UUID(job_id)
+                job = self._job(job_uuid)
                 job_schedule = job.cron_item.schedule()
 
                 # TODO recreate job if before is set
 
                 resp = JobResponse(
-                    id=req.job_id,
+                    id=job_uuid,
                     name=job.name,
                     description=job.cron_item.comment,
                     cron_schedule=str(job.cron_item.slices),
@@ -116,15 +132,13 @@ class CronJobScheduler(BaseScheduler):
                     after_job_id=None,
                     created_at=job.created_at,
                     updated_at=job.updated_at,
-                    # TODO add rest
                     last_run=job_schedule.get_last(),
                     next_run=job_schedule.get_next(),
                 )
 
             return resp.model_dump()
-
         except SchedulerDomainException as error:
-            LOG.error(f'Failed to edit scheduled tasks: {error}')
+            LOG.error(f'Failed to get scheduled task: {error}')
             raise
 
     def delete(self, job_id: str) -> None:
