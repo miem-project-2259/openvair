@@ -36,11 +36,11 @@ class CronJobScheduler(BaseScheduler):
 
     def __create_job(self, req: RequestCreateJob) -> CronItem:
         with self._cron as cron:
+            before_job = self._job(req.before_job_id).cron_item if req.before_job_id else None
             job = cron.new(
                 command=req.command,
                 comment=req.description or '',
-                # FIX this should be job item
-                before=str(req.before_job_id or ''),
+                before=before_job,
             )
             job.setall(req.cron_schedule)
         return job
