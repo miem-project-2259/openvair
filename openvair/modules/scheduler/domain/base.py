@@ -33,7 +33,7 @@ class BaseScheduler(metaclass=abc.ABCMeta):
 
     def __init__(self, cron_obj: CronTab) -> None:
         self._cron = cron_obj
-        self.jobs: dict[str, JobMetadata] = {}
+        self.jobs: dict[UUID, JobMetadata] = {}
 
     @abc.abstractmethod
     def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:

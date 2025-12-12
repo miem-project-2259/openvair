@@ -105,6 +105,7 @@ class RequestUpdateJob(APIConfigRequestModel):
     """
 
     job_id: UUID = Field(
+        ...,
         examples=['a9b51a12-bd31-4fa3-9523-f7e4b8e3d321'],
         description='ID of the job to be updated',
     )

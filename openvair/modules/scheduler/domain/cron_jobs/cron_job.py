@@ -50,12 +50,12 @@ class CronJobScheduler(BaseScheduler):
 
             if req.before_job_id:
                 next_id = req.before_job_id
-                before_job = self._job(str(next_id))
+                before_job = self._job(next_id)
                 before_job.previous_id = job_id
 
             cron_job = self.__create_job(req)
 
-            self.jobs[str(job_id)] = JobMetadata(
+            self.jobs[job_id] = JobMetadata(
                 cron_item=cron_job,
                 name=req.name,
                 created_at=datetime.datetime.now(),
@@ -106,7 +106,7 @@ class CronJobScheduler(BaseScheduler):
                 # TODO recreate job if before is set
 
                 resp = JobResponse(
-                    id=uuid.UUID(req.job_id),
+                    id=req.job_id,
                     name=job.name,
                     description=job.cron_item.comment,
                     cron_schedule=str(job.cron_item.slices),
@@ -129,15 +129,16 @@ class CronJobScheduler(BaseScheduler):
 
     def delete(self, job_id: str) -> None:
         try:
-            job = self._job(job_id)
+            job_uuid = uuid.UUID(job_id)
+            job = self._job(job_uuid)
             with self._cron as cron:
                 cron.remove(job.cron_item)
-            del self.jobs[job_id]
+            del self.jobs[job_uuid]
         except SchedulerDomainException as error:
             LOG.error(f'Failed to delete scheduled task: {error}')
             raise
 
-    def _job(self, key: str) -> JobMetadata:
+    def _job(self, key: uuid.UUID) -> JobMetadata:
         if key not in self.jobs:
-            raise CronJobNotFound(key)
+            raise CronJobNotFound(str(key))
         return self.jobs[key]
