@@ -15,7 +15,7 @@ class SchedulerJobSerializer:
         """Gathering db attributes and converting them to a json format."""
         # Я могу отдавать просто SchedulerJob, Дима сам распарсит на словарь
         return {
-            'id': str(db_model.id),
+                'id': str(db_model.id),
             'name': db_model.name,
             'description': db_model.description,
             'cron_schedule': db_model.cron_schedule,
