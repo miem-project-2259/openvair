@@ -104,10 +104,9 @@ class RequestUpdateJob(APIConfigRequestModel):
         after_job_id (Optional[UUID]): Updated dependency after another job.
     """
 
-    job_id: UUID = Field(
-        ...,
-        examples=['a9b51a12-bd31-4fa3-9523-f7e4b8e3d321'],
-        description='ID of the job to be updated',
+    job_id: str = Field(
+        examples="a9b51a12-bd31-4fa3-9523-f7e4b8e3d321",
+        description="ID of the job to be updated"
     )
     name: Optional[str] = Field(
         None,
