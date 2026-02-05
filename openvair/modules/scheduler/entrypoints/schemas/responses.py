@@ -11,8 +11,9 @@ Classes:
 """
 
 from uuid import UUID
-from typing import Optional, List
+from typing import List, Optional
 from datetime import datetime
+
 from pydantic import Field
 
 from openvair.common.base_pydantic_models import APIConfigResponseModel
@@ -32,8 +33,10 @@ class JobResponse(APIConfigResponseModel):
         updated_at (datetime): Timestamp when the job was last updated.
         last_run (Optional[datetime]): Timestamp of the last job run.
         next_run (Optional[datetime]): Timestamp of the next scheduled run.
-        before_job_id (Optional[UUID]): Job that must finish before this one starts.
-        after_job_id (Optional[UUID]): Job that should run after this one completes.
+        before_job_id (Optional[UUID]): Job that must finish before
+         this one starts.
+        after_job_id (Optional[UUID]): Job that should run after
+         this one completes.
     """
 
     id: UUID = Field(
@@ -69,12 +72,18 @@ class JobResponse(APIConfigResponseModel):
     before_job_id: Optional[UUID] = Field(
         None,
         examples=["c1b65a20-5b29-4b1d-8c1c-8c41cb47d111"],
-        description="If specified, this job will start only after the referenced job finishes",
+        description=(
+            "If specified, this job will start only "
+            "after the referenced job finishes"
+        ),
     )
     after_job_id: Optional[UUID] = Field(
         None,
         examples=["f9d3a511-d3b4-4f4b-9287-4cbf3e6f49de"],
-        description="If specified, the referenced job will start after this one completes",
+        description=(
+            "If specified, the referenced job will"
+            " start after this one completes"
+        ),
     )
     created_at: datetime = Field(
         ...,
