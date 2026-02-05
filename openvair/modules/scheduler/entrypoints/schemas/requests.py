@@ -41,32 +41,32 @@ class RequestCreateJob(APIConfigRequestModel):
 
     name: str = Field(
         ...,
-        examples=["backup_daily"],
-        description="Unique name of the job",
+        examples=['backup_daily'],
+        description='Unique name of the job',
         min_length=1,
         max_length=50,
     )
     description: Optional[str] = Field(
         None,
-        examples=["Daily database backup job"],
-        description="Optional description of the job",
+        examples=['Daily database backup job'],
+        description='Optional description of the job',
         max_length=255,
     )
     cron_schedule: str = Field(
         ...,
-        examples=["0 3 * * *"],
-        description="CRON expression defining when the job runs",
+        examples=['0 3 * * *'],
+        description='CRON expression defining when the job runs',
     )
     command: str = Field(
         ...,
-        examples=["backup.sh"],
-        description="Command to execute when the job runs",
+        examples=['backup.sh'],
+        description='Command to execute when the job runs',
         min_length=1,
     )
     enabled: bool = Field(
         default=True,
         examples=[True],
-        description="Indicates whether the job is enabled",
+        description='Indicates whether the job is enabled',
     )
     before_job_id: Optional[UUID] = Field(
         None,
@@ -124,20 +124,15 @@ class RequestCreateJob(APIConfigRequestModel):
     def validate_non_empty_name(cls, value: str) -> str:
         """Ensure name field is not empty or whitespace-only."""
         if not value or not value.strip():
-            msg = "Name cannot be empty or whitespace"
-            raise ValueError(msg)
+            raise ValueError('Field cannot be empty or whitespace')
         return value.strip()
 
-    @model_validator(mode="after")
-    def check_dependency_conflicts(self) -> "RequestCreateJob":
-        """Ensure that both before_job_id and after_job_id
-
-        are not set simultaneously.
-        """
+    @model_validator(mode='after')
+    def check_dependency_conflicts(self) -> 'RequestCreateJob':
+        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
         if self.before_job_id and self.after_job_id:
-            msg = (
-                "Cannot specify both before_job_id "
-                "and after_job_id for the same job."
+            raise ValueError(
+                'Cannot specify both before_job_id and after_job_id for the same job.'
             )
             raise ValueError(msg)
         return self
@@ -156,33 +151,37 @@ class RequestUpdateJob(APIConfigRequestModel):
         after_job_id (Optional[UUID]): Updated dependency after another job.
     """
 
+    job_id: str = Field(
+        examples="a9b51a12-bd31-4fa3-9523-f7e4b8e3d321",
+        description="ID of the job to be updated"
+    )
     name: Optional[str] = Field(
         None,
-        examples=["backup_db_updated"],
-        description="Updated name for the job",
+        examples=['backup_db_updated'],
+        description='Updated name for the job',
         min_length=1,
         max_length=50,
     )
     description: Optional[str] = Field(
         None,
-        examples=["Incremental backup job"],
-        description="Updated description for the job",
+        examples=['Incremental backup job'],
+        description='Updated description for the job',
         max_length=255,
     )
     cron_schedule: Optional[str] = Field(
         None,
-        examples=["0 2 * * *"],
-        description="Updated CRON schedule for the job",
+        examples=['0 2 * * *'],
+        description='Updated CRON schedule for the job',
     )
     command: Optional[str] = Field(
         None,
-        examples=["backup_incremental.sh"],
-        description="Updated command for the job",
+        examples=['backup_incremental.sh'],
+        description='Updated command for the job',
     )
     enabled: Optional[bool] = Field(
         None,
         examples=[False],
-        description="Whether the job is enabled or disabled",
+        description='Whether the job is enabled or disabled',
     )
     before_job_id: Optional[UUID] = Field(
         None,
@@ -237,20 +236,15 @@ class RequestUpdateJob(APIConfigRequestModel):
     def validate_optional_name(cls, value: Optional[str]) -> Optional[str]:
         """Validate that name, if provided, is not empty or whitespace-only."""
         if value is not None and not value.strip():
-            msg = "Name cannot be only whitespace"
-            raise ValueError(msg)
+            raise ValueError('Field cannot be only whitespace')
         return value.strip() if value else value
 
-    @model_validator(mode="after")
-    def check_dependency_conflicts(self) -> "RequestUpdateJob":
-        """Validate that job dependencies do not conflict.
-
-        Both before_job_id and after_job_id cannot be set simultaneously.
-        """
+    @model_validator(mode='after')
+    def check_dependency_conflicts(self) -> 'RequestUpdateJob':
+        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
         if self.before_job_id and self.after_job_id:
-            msg = (
-                "Cannot specify both before_job_id and after_job_id "
-                "for the same job."
+            raise ValueError(
+                'Cannot specify both before_job_id and after_job_id for the same job.'
             )
             raise ValueError(msg)
         return self
@@ -265,6 +259,6 @@ class RequestDeleteJob(APIConfigRequestModel):
 
     job_id: UUID = Field(
         ...,
-        examples=["a73f920b-d282-41e4-8ec1-6e6b89d3a9e7"],
-        description="Unique identifier of the job to delete",
+        examples=['a73f920b-d282-41e4-8ec1-6e6b89d3a9e7'],
+        description='Unique identifier of the job to delete',
     )
