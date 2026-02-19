@@ -13,11 +13,25 @@ class Base(DeclarativeBase):
 
 
 class SchedulerJob(Base):
-    """SQLAlchemy model representing a scheduled job."""
+    """ORM class representing a job.
+
+    Attributes:
+        id: Unique identifier of the job.
+        name: Unique name of the job.
+        description: Optional description.
+        cron_schedule: Cron schedule expression.
+        command: Cron job command.
+        enabled: State of the job (enabled / disabled).
+        created_at: Timestamp when the job was created.
+        updated_at: Timestamp when the job was lastly updated.
+        last_run: Timestamp when the job ran last time.
+        next_run: Timestamp when the job is going to run next time.
+
+    """
 
     __tablename__ = 'scheduler_jobs'
 
-    id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column( # Прилетают от Саши
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)

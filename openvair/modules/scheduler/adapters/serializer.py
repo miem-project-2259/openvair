@@ -1,4 +1,13 @@
-"""Serializing data to suittable formats."""
+"""Serializers for the Scheduler module.
+
+Provides conversion logic between ORM models and DTOs used at API and domain
+layers.
+
+Classes: WIP NEED TO CONVERT TO DTO!!!
+    - ApiSerializer: ORM <-> API DTO
+    - DomainSerializer: ORM <-> Domain DTO
+    - CreateSerializer: Create DTO -> ORM
+"""
 
 from typing import Any, Dict
 
@@ -15,23 +24,22 @@ class SchedulerJobSerializer:
         """Gathering db attributes and converting them to a json format."""
         # Я могу отдавать просто SchedulerJob, Дима сам распарсит на словарь
         return {
-                'id': str(db_model.id),
+            'id': str(db_model.id),
             'name': db_model.name,
             'description': db_model.description,
             'cron_schedule': db_model.cron_schedule,
             'command': db_model.command,
             'enabled': db_model.enabled,
-            'created_at': (db_model.created_at.isoformat()),
-            'updated_at': (
-                db_model.updated_at.isoformat() if db_model.updated_at else None
-            ),
-            'last_run': db_model.last_run.isoformat()
-            if db_model.last_run
-            else None,
-            'next_run': db_model.next_run.isoformat()
-            if db_model.next_run
-            else None,
+            'created_at': db_model.created_at.isoformat() if db_model.created_at
+                                                            else None,
+            'updated_at': db_model.updated_at.isoformat() if db_model.updated_at
+                                                            else None,
+            'last_run': db_model.last_run.isoformat() if db_model.last_run
+                                                            else None,
+            'next_run': db_model.next_run.isoformat() if db_model.next_run
+                                                            else None,
         }
+
 
     @staticmethod
     def to_db(data: Dict[str, Any]) -> SchedulerJob:

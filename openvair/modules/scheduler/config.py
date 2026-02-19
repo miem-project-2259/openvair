@@ -1,11 +1,13 @@
 """Scheduler service layer configuration loader."""
 
-from pathlib import Path
-
+from openvair.config import RPC_QUEUES, get_default_session_factory
 import toml
 import re
 
-CONFIG_PATH = Path('/opt/aero/openvair/project_config.toml')
+CONFIG_PATH = 'project_config.toml'
+API_SERVICE_LAYER_QUEUE_NAME: str = RPC_QUEUES.Scheduler.SERVICE_LAYER
+SERVICE_LAYER_DOMAIN_QUEUE_NAME: str = RPC_QUEUES.Scheduler.DOMAIN_LAYER
+DEFAULT_SESSION_FACTORY = get_default_session_factory()
 
 # Forbidden command patterns for validation
 FORBIDDEN_COMMAND_PATTERNS = [
@@ -55,7 +57,3 @@ CRON_USER = 'openvair'
 MAX_CONCURRENT_JOBS = 10
 JOB_TIMEOUT = 3600
 LOG_RETENTION_DAYS = 30
-
-# --- RabbitMQ queues ---
-API_SERVICE_LAYER_QUEUE_NAME = 'scheduler_api_service_layer_queue'
-SERVICE_LAYER_DOMAIN_QUEUE_NAME = 'scheduler_service_layer_domain_queue'

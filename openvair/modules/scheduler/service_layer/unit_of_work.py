@@ -1,47 +1,43 @@
-"""Unit of Work implementation for scheduler module using SQLAlchemy."""
+"""Unit of Work implementation for the scheduler module.
 
-from typing import Type, Optional, cast
+This module defines a SQLAlchemy-based Unit of Work for managing
+scheduler-related transactions and repositories.
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session as SqlAlchemySession, sessionmaker
+Classes:
+    - SchedulerSqlAlchemyUnitOfWork: Unit of Work for the scheduler module.
+"""
 
+from sqlalchemy.orm import sessionmaker
+
+from openvair.modules.scheduler.config import DEFAULT_SESSION_FACTORY
+from openvair.common.uow.base_sqlalchemy import BaseSqlAlchemyUnitOfWork
 from openvair.modules.scheduler.adapters.repository import (
-    SqlAlchemySchedulerRepository,
+    SchedulerSqlAlchemyRepository,
 )
 
-DATABASE_URL = 'postgresql+psycopg2://openvair:openvair@localhost/openvair'
 
-engine = create_engine(DATABASE_URL)
-Session = sessionmaker(bind=engine)
+class SchedulerSqlAlchemyUnitOfWork(BaseSqlAlchemyUnitOfWork):
+    """Unit of Work for the scheduler module.
 
+    This class manages database transactions for scheduler, ensuring consistency
+    by committing or rolling back operations.
 
-class SchedulerSqlAlchemyUnitOfWork:
-    """Unit of Work for managing scheduler database transactions."""
+    Attributes:
+        templates (SchedulerSqlAlchemyRepository): Repository for job
+            entities.
+    """
 
-    def __init__(self) -> None:
-        """Initialize scheduler Unit of Work."""
-        self.session: SqlAlchemySession = cast(SqlAlchemySession, None)
-        self.jobs: SqlAlchemySchedulerRepository = cast(
-            SqlAlchemySchedulerRepository, None
-        )
-
-    def __enter__(self) -> 'SchedulerSqlAlchemyUnitOfWork':
-        """Open DB session and repository for use inside context manager."""
-        self.session = Session()
-        self.jobs = SqlAlchemySchedulerRepository(self.session)
-        return self
-
-    def __exit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[object],
+    def __init__(
+        self, session_factory: sessionmaker = DEFAULT_SESSION_FACTORY
     ) -> None:
-        """Commit on success or roll back on error, then close session."""
-        try:
-            if exc_type:
-                self.session.rollback()
-            else:
-                self.session.commit()
-        finally:
-            self.session.close()
+        """Initializes the Unit of Work with a session factory.
+
+        Args:
+            session_factory (sessionmaker): SQLAlchemy session factory.
+                Defaults to DEFAULT_SESSION_FACTORY.
+        """
+        super().__init__(session_factory)
+
+    def _init_repositories(self) -> None:
+        """Initializes repositories for the template module."""
+        self.jobs = SchedulerSqlAlchemyRepository(self.session)

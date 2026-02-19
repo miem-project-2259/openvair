@@ -1,18 +1,32 @@
-"""Repository implementation for scheduler jobs using SQLAlchemy."""
+"""SQLAlchemy repository for the scheduler module.
+
+This module implements the repository pattern to manage job entities
+in the database using SQLAlchemy.
+"""
 
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
 from openvair.modules.scheduler.adapters.orm import SchedulerJob
+from openvair.common.repositories.base_sqlalchemy import (
+    BaseSqlAlchemyRepository,
+)
+
+# from openvair.modules.scheduler.adapters.exceptions import (
+#     JobNotFoundInDBException, # NEEDS_TO_BE_IMPLEMENTED!!!
+# )
 
 
-class SqlAlchemySchedulerRepository:
-    """Repository for managing SchedulerJob entities using SQLAlchemy."""
+class SchedulerSqlAlchemyRepository(BaseSqlAlchemyRepository[SchedulerJob]):
+    """Repository for managing scheduler jobs entities.
+
+    This class provides CRUD operations for the jobs using SQLAlchemy.
+    """
 
     def __init__(self, session: Session) -> None:
         """Initialize repository with SQLAlchemy session."""
-        self.session = session
+        super().__init__(session, SchedulerJob)
 
     def get_all(self) -> List[SchedulerJob]:
         """Retrieve all scheduler jobs."""
