@@ -124,16 +124,17 @@ class RequestCreateJob(APIConfigRequestModel):
     def validate_non_empty_name(cls, value: str) -> str:
         """Ensure name field is not empty or whitespace-only."""
         if not value or not value.strip():
-            raise ValueError('Field cannot be empty or whitespace')
+            raise ValueError('Field cannot be empty or whitespace') # noqa TRY003
         return value.strip()
 
     @model_validator(mode='after')
     def check_dependency_conflicts(self) -> 'RequestCreateJob':
-        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
+        """Ensure that both before_job_id and after_job_id are not set simultaneously.""" # noqa D205
         if self.before_job_id and self.after_job_id:
-            raise ValueError(
-                'Cannot specify both before_job_id and after_job_id for the same job.'
-            )
+            msg = (
+                'Cannot specify both before_job_id '
+                'and after_job_id for the same job.'
+                )
             raise ValueError(msg)
         return self
 
@@ -152,7 +153,7 @@ class RequestUpdateJob(APIConfigRequestModel):
     """
 
     job_id: str = Field(
-        examples="a9b51a12-bd31-4fa3-9523-f7e4b8e3d321",
+        examples=["a9b51a12-bd31-4fa3-9523-f7e4b8e3d321"],
         description="ID of the job to be updated"
     )
     name: Optional[str] = Field(
@@ -235,17 +236,19 @@ class RequestUpdateJob(APIConfigRequestModel):
     @classmethod
     def validate_optional_name(cls, value: Optional[str]) -> Optional[str]:
         """Validate that name, if provided, is not empty or whitespace-only."""
+        msg = 'Field cannot be only whitespace'
         if value is not None and not value.strip():
-            raise ValueError('Field cannot be only whitespace')
+            raise ValueError(msg)
         return value.strip() if value else value
 
     @model_validator(mode='after')
     def check_dependency_conflicts(self) -> 'RequestUpdateJob':
-        """Ensure that both before_job_id and after_job_id are not set simultaneously."""
+        """Ensure that both before_job_id and after_job_id are not set simultaneously.""" # noqa: E501, W505
+        msg = (
+            'Cannot specify both before_'
+            'job_id and after_job_id for the same job.'
+        )
         if self.before_job_id and self.after_job_id:
-            raise ValueError(
-                'Cannot specify both before_job_id and after_job_id for the same job.'
-            )
             raise ValueError(msg)
         return self
 

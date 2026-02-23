@@ -1,10 +1,16 @@
 """Scheduler service layer configuration loader."""
 
-from openvair.config import RPC_QUEUES, get_default_session_factory
-import toml
 import re
 
-CONFIG_PATH = 'project_config.toml'
+import toml
+
+from openvair.config import (
+    RPC_QUEUES,
+    PROJECT_ROOT,
+    get_default_session_factory,
+)
+
+CONFIG_PATH = PROJECT_ROOT / 'project_config.toml'
 API_SERVICE_LAYER_QUEUE_NAME: str = RPC_QUEUES.Scheduler.SERVICE_LAYER
 SERVICE_LAYER_DOMAIN_QUEUE_NAME: str = RPC_QUEUES.Scheduler.DOMAIN_LAYER
 DEFAULT_SESSION_FACTORY = get_default_session_factory()

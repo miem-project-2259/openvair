@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List
 
-from croniter import croniter
+from crontab import CronSlices  #TODO: uberi nenujnie validacii
 
 from openvair.libs.log import get_logger
 from openvair.modules.scheduler.config import (
@@ -79,7 +79,7 @@ class SchedulerServiceLayerManager:
             raise JobInvalidNameError(message)
 
         cron_schedule = data.get('cron_schedule')
-        if not isinstance(cron_schedule, str) or not croniter.is_valid(
+        if not isinstance(cron_schedule, str) or not CronSlices.is_valid(
             cron_schedule
         ):
             message = 'Invalid cron expression'
@@ -96,10 +96,10 @@ class SchedulerServiceLayerManager:
             uow.commit()
             uow.session.refresh(new_job)
 
-            self.domain_rpc.cast(
-                method_name='create_job',
-                data_for_method=SchedulerJobSerializer.to_domain(new_job),
-            )
+            # self.domain_rpc.cast(
+            #     method_name='create_job',
+            #     data_for_method=SchedulerJobSerializer.to_domain(new_job),
+            # )
 
             return SchedulerJobSerializer.to_web(new_job)
 
@@ -109,7 +109,7 @@ class SchedulerServiceLayerManager:
         data = payload["data"]
 
         with self.uow() as uow:
-            job = self._get_job_or_raise(uow, job_id)
+            job = self.get_job(uow, job_id)
             allowed_fields = self._validate_edit_data(uow, job, data)
 
             for key in allowed_fields & data.keys():
@@ -125,7 +125,7 @@ class SchedulerServiceLayerManager:
 
             return SchedulerJobSerializer.to_web(job)
 
-    def _get_job_or_raise(
+    def get_job(
         self, u: 'SchedulerSqlAlchemyUnitOfWork', job_id: int
     ) -> SchedulerJob:
         """Retrieve job by id or raise not found error."""
@@ -146,7 +146,7 @@ class SchedulerServiceLayerManager:
         if (
             cron_schedule
             and isinstance(cron_schedule, str)
-            and not croniter.is_valid(cron_schedule)
+            and not CronSlices.is_valid(cron_schedule)
         ):
             message = 'Invalid cron expression'
             raise JobInvalidCronExpression(message)

@@ -18,15 +18,17 @@ from uuid import UUID
 from typing import Any, Dict, List
 
 from openvair.libs.log import get_logger
-from openvair.modules.template.config import API_SERVICE_LAYER_QUEUE_NAME
+from openvair.modules.scheduler.config import API_SERVICE_LAYER_QUEUE_NAME
 from openvair.libs.messaging.messaging_agents import MessagingClient
+from openvair.modules.scheduler.service_layer.services import (
+    SchedulerServiceLayerManager,
+)
 from openvair.modules.scheduler.entrypoints.schemas.requests import (
     RequestCreateJob,
     RequestUpdateJob,
 )
 from openvair.modules.scheduler.entrypoints.schemas.responses import (
     JobResponse,
-    JobListResponse,
 )
 from openvair.modules.scheduler.adapters.dto.internal.commands import (
     GetJobServiceCommandDTO,
@@ -58,11 +60,11 @@ class SchedulerCrud:
             queue_name=API_SERVICE_LAYER_QUEUE_NAME
         )
 
-    def get_all_jobs(self) -> List[JobListResponse]:
+    def get_all_jobs(self) -> List[JobResponse]:
         """Retrieve a list of all jobs via RPC.
 
         Returns:
-            List[JobListResponse]: A list of all available jobs.
+            List[JobResponse]: A list of all available jobs.
         """
         LOG.info('Call service layer on getting jobs.')
 
@@ -71,7 +73,7 @@ class SchedulerCrud:
             data_for_method={},
         )
 
-        return [JobListResponse.model_validate(item) for item in result]
+        return [JobResponse.model_validate(item) for item in result]
 
     def get_job(self, job_id: UUID) -> JobResponse:
         """Retrieve a specific job by its ID via RPC.

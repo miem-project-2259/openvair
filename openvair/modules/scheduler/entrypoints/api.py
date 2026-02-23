@@ -36,7 +36,6 @@ from openvair.modules.scheduler.entrypoints.schemas.requests import (
 )
 from openvair.modules.scheduler.entrypoints.schemas.responses import (
     JobResponse,
-    JobListResponse,
 )
 
 LOG = get_logger(__name__)
@@ -52,13 +51,13 @@ router = APIRouter(
 
 @router.get(
     '/jobs',
-    response_model=BaseResponse[Page[JobListResponse]],
+    response_model=BaseResponse[Page[JobResponse]],
     status_code=status.HTTP_200_OK,
 )
 async def get_jobs(
     crud: SchedulerCrud = Depends(SchedulerCrud),
     params: Params = Depends(),
-) -> BaseResponse[Page[JobListResponse]]:
+) -> BaseResponse[Page[JobResponse]]:
     """Retrieve a paginated list of jobs.
 
     Args:
@@ -66,11 +65,11 @@ async def get_jobs(
             logic.
         params (Params): Dependency-injected for pagination params
     Returns:
-        BaseResponse[Page[JobListResponse]]: Paginated response containing jobs.
+        BaseResponse[Page[JobResponse]]: Paginated response containing jobs.
     """
     LOG.info('Api handle request on getting jobs')
 
-    jobs: List[JobListResponse] = await run_in_threadpool(
+    jobs: List[JobResponse] = await run_in_threadpool(
         crud.get_all_jobs
     )
     paginated_jobs = paginate(jobs, params)
