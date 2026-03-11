@@ -4,6 +4,7 @@ This module implements the repository pattern to manage job entities
 in the database using SQLAlchemy.
 """
 
+from uuid import UUID
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -32,7 +33,7 @@ class SchedulerSqlAlchemyRepository(BaseSqlAlchemyRepository[SchedulerJob]):
         """Retrieve all scheduler jobs."""
         return self.session.query(SchedulerJob).all()
 
-    def get_by_id(self, job_id: int) -> Optional[SchedulerJob]:
+    def get_by_id(self, job_id: UUID) -> Optional[SchedulerJob]:
         """Retrieve scheduler job by its ID."""
         return (
             self.session.query(SchedulerJob)

@@ -49,3 +49,5 @@ class SchedulerJob(Base):
     next_run: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )  # Пока не знаем как заполнять
+    before_job_id = mapped_column(UUID(as_uuid=True), nullable=True)
+    after_job_id = mapped_column(UUID(as_uuid=True), nullable=True)

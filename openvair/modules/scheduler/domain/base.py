@@ -1,8 +1,11 @@
+# mypy: disable-error-code="no-any-unimported, unused-ignore"
+
 """Base classes for scheduler domain models.
 
-This module defines the `BaseScheduler` abstract class, which serves as the
-foundation for implementing specific scheduler types (e.g., SystemCronScheduler).
-It declares the required interface and shared fields for managing scheduled tasks.
+This module defines the `BaseScheduler` abstract class, which serves
+as the foundation for implementing specific scheduler types
+(e.g., SystemCronScheduler). It declares the required interface
+and shared fields for managing scheduled tasks.
 """
 
 import abc
@@ -11,10 +14,36 @@ from uuid import UUID
 from typing import Any, Optional
 
 from crontab import CronTab, CronItem
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 
 
 class JobMetadata(BaseModel):
+    """Metadata container for a scheduled task in the scheduler domain.
+
+    This class encapsulates the physical cron task (CronItem) along with
+    domain-specific information such as naming, audit timestamps, and
+    relational links to other job versions or related tasks.
+
+    Attributes:
+        cron_item (CronItem): The underlying crontab item instance.
+        name (str): Human-readable identifier for the task.
+        created_at (datetime.datetime): Timestamp when the task was created.
+        updated_at (Optional[datetime.datetime]): Timestamp of the last
+            modification. Defaults to None.
+        previous_id (UUID | None): Identifier of the preceding task version
+            or related job in a sequence.
+        next_id (UUID | None): Identifier of the succeeding task version
+            or related job in a sequence.
+
+    Note:
+        The `model_config` allows `arbitrary_types_allowed` to support
+        the `CronItem` type, which is not a native Pydantic model.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    # ^^^ Added because of
+    # pydantic.errors.PydanticSchemaGenerationError:
+    # Unable to generate pydantic-core schema for <class 'crontab.CronItem'>
     cron_item: CronItem
     name: str
     created_at: datetime.datetime
@@ -32,6 +61,12 @@ class BaseScheduler(metaclass=abc.ABCMeta):
     """
 
     def __init__(self, cron_obj: CronTab) -> None:
+        """Initialize the BaseScheduler.
+
+        Args:
+            cron_obj (CronTab): An instance of CronTab used to interact
+                with the system's scheduled tasks.
+        """
         self._cron = cron_obj
         self.jobs: dict[UUID, JobMetadata] = {}
 
@@ -41,7 +76,8 @@ class BaseScheduler(metaclass=abc.ABCMeta):
 
         Args:
             creation_data (dict[str, Any]): Data required for task creation,
-                e.g., {'schedule': '0 0 * * *', 'command': '/bin/true', 'comment': 'my-job-id'}.
+                e.g., {'schedule': '0 0 * * *', 'command': '/bin/true',
+                'comment': 'my-job-id'}.
 
         Returns:
             dict[str, Any]: A dictionary representation of the created task.

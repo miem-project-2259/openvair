@@ -56,4 +56,8 @@ class SchedulerJobSerializer:
             'cron_schedule': db_model.cron_schedule,
             'command': db_model.command,
             'enabled': db_model.enabled,
+            'before_job_id': str(db_model.before_job_id)
+                            if db_model.before_job_id else None,
+            'after_job_id': str(db_model.after_job_id)
+                            if db_model.after_job_id else None,
         }

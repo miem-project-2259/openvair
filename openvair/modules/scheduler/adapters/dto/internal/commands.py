@@ -37,12 +37,12 @@ class CreateJobServiceCommandDTO(BaseDTOModel):
     """
 
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     cron_schedule: str
     command: str
     enabled: bool
-    before_job_id: UUID
-    after_job_id: UUID
+    before_job_id: Optional[UUID] = None
+    after_job_id: Optional[UUID] = None
 
 
 class UpdateJobServiceCommandDTO(BaseDTOModel):
@@ -58,13 +58,13 @@ class UpdateJobServiceCommandDTO(BaseDTOModel):
         after_job_id (Optional[UUID]): Updated dependency after another job.
     """
 
-    name: Optional[str]
-    description: Optional[str]
-    cron_schedule: Optional[str]
-    command: Optional[str]
-    enabled: Optional[bool]
-    before_job_id: Optional[UUID]
-    after_job_id: Optional[UUID]
+    name: Optional[str] = None
+    description: Optional[str] = None
+    cron_schedule: Optional[str] = None
+    command: Optional[str] = None
+    enabled: Optional[bool] = None
+    before_job_id: Optional[UUID] = None
+    after_job_id: Optional[UUID] = None
 
 
 class DeleteJobServiceCommandDTO(BaseDTOModel):

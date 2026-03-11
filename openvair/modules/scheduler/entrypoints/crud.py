@@ -138,7 +138,8 @@ class SchedulerCrud:
         )
         result: Dict[str, Any] = self.service_layer_rpc.call(
             SchedulerServiceLayerManager.edit_job.__name__,
-            data_for_method=editing_command.model_dump(mode='json'),
+            data_for_method=editing_command.model_dump(mode='json',
+                                                       exclude_none=True),
         )
         return JobResponse.model_validate(result)
 

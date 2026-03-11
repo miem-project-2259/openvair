@@ -1,5 +1,6 @@
 """Scheduler service basic operations (get, create, edit, delete)."""
 
+from uuid import UUID
 from typing import Any, Dict, List
 
 from crontab import CronSlices  #TODO: uberi nenujnie validacii
@@ -96,20 +97,23 @@ class SchedulerServiceLayerManager:
             uow.commit()
             uow.session.refresh(new_job)
 
-            # self.domain_rpc.cast(
-            #     method_name='create_job',
-            #     data_for_method=SchedulerJobSerializer.to_domain(new_job),
+            # LOG.info('Casting to domain layer to create a job')
+            # domain_payload = SchedulerJobSerializer.to_domain(new_job)
+
+            # self.domain_rpc.call(
+            #     method_name='create',
+            #     data_for_method=domain_payload,
             # )
 
             return SchedulerJobSerializer.to_web(new_job)
 
     def edit_job(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Edit an existing scheduler job."""
-        job_id = payload["job_id"]
-        data = payload["data"]
+        job_id = payload["id"]
+        data = {k: v for k, v in payload.items() if k != "id"}
 
         with self.uow() as uow:
-            job = self.get_job(uow, job_id)
+            job = self._retrieve_job(uow, job_id)
             allowed_fields = self._validate_edit_data(uow, job, data)
 
             for key in allowed_fields & data.keys():
@@ -118,15 +122,27 @@ class SchedulerServiceLayerManager:
             uow.commit()
             uow.session.refresh(job)
 
-            # self.domain_rpc.cast(
-            #     method_name='edit_job',
-            #     data_for_method=SchedulerJobSerializer.to_domain(?),
-            # ) ? Что должно происходить на доменном слое при изменении джобы?
+            domain_payload = SchedulerJobSerializer.to_domain(job)
+            domain_payload['job_id'] = str(job_id)
+
+            LOG.info('Casting to domain layer to edit a job')
+            domain_payload = SchedulerJobSerializer.to_domain(job)
+            domain_payload['job_id'] = str(job_id)
+
+            # self.domain_rpc.call(
+            #     method_name='edit',
+            #     scheduler_data=domain_payload,
+            #     data_for_method={
+            #         'editing_data': domain_payload
+            #     },
+            # )
 
             return SchedulerJobSerializer.to_web(job)
 
-    def get_job(
-        self, u: 'SchedulerSqlAlchemyUnitOfWork', job_id: int
+    def _retrieve_job(
+        self,
+        u: 'SchedulerSqlAlchemyUnitOfWork',
+        job_id: UUID
     ) -> SchedulerJob:
         """Retrieve job by id or raise not found error."""
         job = u.jobs.get_by_id(job_id)
@@ -153,7 +169,7 @@ class SchedulerServiceLayerManager:
 
         new_name = data.get("name")
         if new_name is not None:
-            existing = u.jobs.get_by_name(data['name'])
+            existing = u.jobs.get_by_name(new_name)
             if existing and existing.id != job.id:
                 message = 'Job already exists'
                 raise JobNameAlreadyExists(message)
@@ -176,7 +192,8 @@ class SchedulerServiceLayerManager:
 
     def delete_job(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Delete scheduler job by its ID."""
-        job_id = payload["job_id"]
+        job_id = payload["id"]
+
         with self.uow() as uow:
             job = uow.jobs.get_by_id(job_id)
 
@@ -187,12 +204,23 @@ class SchedulerServiceLayerManager:
             uow.jobs.delete(job)
             uow.commit()
 
-            # self.domain_rpc.cast(
-            #     method_name='delete_job',
-            #     data_for_method=SchedulerJobSerializer.to_domain(new_job), ?
-            # По какому атрибуту мне указывать на
-            # конкретный джоб на доменном слое?
+            # self.domain_rpc.call(
+            #     method_name='delete',
+            #     data_for_method=
+            #     {
+            #         'job_id': str(job_id)
+            #     },
             # )
+
+            return SchedulerJobSerializer.to_web(job)
+
+
+    def get_job(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Get scheduler job by its UUID."""
+        job_id = payload["id"]
+
+        with self.uow() as uow:
+            job = self._retrieve_job(uow, job_id)
 
             return SchedulerJobSerializer.to_web(job)
 
