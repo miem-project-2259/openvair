@@ -97,12 +97,8 @@ class RequestCreateJob(APIConfigRequestModel):
             msg = "Command contains forbidden or unsafe operations"
             raise ValueError(msg)
 
-        if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
+        if not re.match(r"^[a-zA-Z0-9_\-./ >&|;]+$", value):
             msg = "Command contains invalid characters"
-            raise ValueError(msg)
-
-        if not re.search(r'\.sh$', value):
-            msg = "Command must reference a valid script file (e.g., backup.sh)"
             raise ValueError(msg)
 
         return value.strip()

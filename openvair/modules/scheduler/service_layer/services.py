@@ -97,13 +97,14 @@ class SchedulerServiceLayerManager:
             uow.commit()
             uow.session.refresh(new_job)
 
-            # LOG.info('Casting to domain layer to create a job')
-            # domain_payload = SchedulerJobSerializer.to_domain(new_job)
+            LOG.info('Casting to domain layer to create a job')
+            domain_payload = SchedulerJobSerializer.to_domain(new_job)
 
-            # self.domain_rpc.call(
-            #     method_name='create',
-            #     data_for_method=domain_payload,
-            # )
+            self.domain_rpc.call(
+                method_name='create',
+                scheduler_data=domain_payload,
+                creation_data=domain_payload
+            )
 
             return SchedulerJobSerializer.to_web(new_job)
 
@@ -122,20 +123,17 @@ class SchedulerServiceLayerManager:
             uow.commit()
             uow.session.refresh(job)
 
-            domain_payload = SchedulerJobSerializer.to_domain(job)
-            domain_payload['job_id'] = str(job_id)
-
             LOG.info('Casting to domain layer to edit a job')
             domain_payload = SchedulerJobSerializer.to_domain(job)
             domain_payload['job_id'] = str(job_id)
 
-            # self.domain_rpc.call(
-            #     method_name='edit',
-            #     scheduler_data=domain_payload,
-            #     data_for_method={
-            #         'editing_data': domain_payload
-            #     },
-            # )
+            self.domain_rpc.call(
+                method_name='edit',
+                scheduler_data=domain_payload,
+                data_for_method={
+                    'editing_data': domain_payload
+                },
+            )
 
             return SchedulerJobSerializer.to_web(job)
 
@@ -202,13 +200,13 @@ class SchedulerServiceLayerManager:
             uow.jobs.delete(job)
             uow.commit()
 
-            # self.domain_rpc.call(
-            #     method_name='delete',
-            #     data_for_method=
-            #     {
-            #         'job_id': str(job_id)
-            #     },
-            # )
+            self.domain_rpc.call(
+                method_name='delete',
+                data_for_method=
+                {
+                    'job_id': str(job_id)
+                },
+            )
 
             return SchedulerJobSerializer.to_web(job)
 
