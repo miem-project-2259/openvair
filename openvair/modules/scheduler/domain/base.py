@@ -11,9 +11,9 @@ and shared fields for managing scheduled tasks.
 import abc
 import datetime
 from uuid import UUID
-from typing import Any, Optional
+from typing import Any, Dict, List, Union, Optional
 
-from crontab import CronTab, CronItem
+from crontab import CronItem
 from pydantic import Field, BaseModel, ConfigDict
 
 
@@ -48,8 +48,8 @@ class JobMetadata(BaseModel):
     name: str
     created_at: datetime.datetime
     updated_at: Optional[datetime.datetime] = Field(default=None)
-    previous_id: UUID | None = Field(default=None)
-    next_id: UUID | None = Field(default=None)
+    previous_id: Union[UUID, None] = Field(default=None)
+    next_id: Union[UUID, None] = Field(default=None)
 
 
 class BaseScheduler(metaclass=abc.ABCMeta):
@@ -60,39 +60,33 @@ class BaseScheduler(metaclass=abc.ABCMeta):
     Concrete implementations must implement all abstract methods.
     """
 
-    def __init__(self, cron_obj: CronTab) -> None:
-        """Initialize the BaseScheduler.
-
-        Args:
-            cron_obj (CronTab): An instance of CronTab used to interact
-                with the system's scheduled tasks.
-        """
-        self._cron = cron_obj
-        self.jobs: dict[UUID, JobMetadata] = {}
+    def __init__(self) -> None:
+        """Initialize the BaseScheduler."""
+        self.jobs: Dict[UUID, JobMetadata] = {}
 
     @abc.abstractmethod
-    def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:
+    def create(self, creation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a scheduled task.
 
         Args:
-            creation_data (dict[str, Any]): Data required for task creation,
+            creation_data (Dict[str, Any]): Data required for task creation,
                 e.g., {'schedule': '0 0 * * *', 'command': '/bin/true',
                 'comment': 'my-job-id'}.
 
         Returns:
-            dict[str, Any]: A dictionary representation of the created task.
+            Dict[str, Any]: A dictionary representation of the created task.
         """
         ...
 
     @abc.abstractmethod
-    def get(self, job_id: str) -> dict[str, Any]:
+    def get(self, job_id: str) -> Dict[str, Any]:
         """Retrieve a single scheduled task by its unique identifier.
 
         Args:
             job_id (str): The unique identifier (e.g., comment) of the task.
 
         Returns:
-            dict[str, Any]: A dictionary representation of the found task.
+            Dict[str, Any]: A dictionary representation of the found task.
 
         Raises:
             CronJobNotFound: If a task with the given ID is not found.
@@ -100,24 +94,24 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def list_all(self) -> list[dict[str, Any]]:
+    def list_all(self) -> List[Dict[str, Any]]:
         """Retrieve all scheduled tasks managed by this scheduler.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, where each dictionary
+            List[Dict[str, Any]]: A list of dictionaries, where each dictionary
             represents a scheduled task.
         """
         ...
 
     @abc.abstractmethod
-    def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]:
+    def edit(self, editing_data: Dict[str, Any]) -> Dict[str, Any]:
         """Edit a scheduled task.
 
         Args:
-            editing_data (dict[str, Any]): New data for the task.
+            editing_data (Dict[str, Any]): New data for the task.
 
         Returns:
-            dict[str, Any]: A dictionary representation of the updated task.
+            Dict[str, Any]: A dictionary representation of the updated task.
 
         Raises:
             CronJobNotFound: If a task with the given ID is not found.

@@ -5,7 +5,7 @@ factories based on scheduler types
 """
 
 import abc
-from typing import Dict, ClassVar, cast
+from typing import Dict, ClassVar, Optional, cast
 
 from crontab import CronTab
 from pydantic import Field, BaseModel
@@ -19,8 +19,8 @@ from openvair.modules.scheduler.domain.cron_jobs.cron_job import (
 class DomainSchedulerModelDTO(BaseModel):
     """Заглушка"""
 
-    scheduler_type: str = Field(..., alias="type")
-    user: str | None = None
+    scheduler_type: str = Field(..., alias='type')
+    user: Optional[str] = None
 
 
 class AbstractSchedulerFactory(metaclass=abc.ABCMeta):
@@ -52,6 +52,7 @@ class AbstractSchedulerFactory(metaclass=abc.ABCMeta):
 
 class SchedulerFactory(AbstractSchedulerFactory):
     """Concrete factory for scheduler creation."""
+
     _scheduler_classes: ClassVar = {
         'system_cron': CronJobScheduler,
     }

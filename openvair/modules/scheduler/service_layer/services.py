@@ -1,9 +1,9 @@
 """Scheduler service basic operations (get, create, edit, delete)."""
 
 from uuid import UUID
-from typing import Any, Dict, List
+from typing import Any, Set, Dict, List
 
-from crontab import CronSlices  #TODO: uberi nenujnie validacii
+from crontab import CronSlices  # TODO: uberi nenujnie validacii
 
 from openvair.libs.log import get_logger
 from openvair.modules.scheduler.config import (
@@ -109,8 +109,8 @@ class SchedulerServiceLayerManager:
 
     def edit_job(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Edit an existing scheduler job."""
-        job_id = payload["id"]
-        data = {k: v for k, v in payload.items() if k != "id"}
+        job_id = payload['id']
+        data = {k: v for k, v in payload.items() if k != 'id'}
 
         with self.uow() as uow:
             job = self._retrieve_job(uow, job_id)
@@ -140,9 +140,7 @@ class SchedulerServiceLayerManager:
             return SchedulerJobSerializer.to_web(job)
 
     def _retrieve_job(
-        self,
-        u: 'SchedulerSqlAlchemyUnitOfWork',
-        job_id: UUID
+        self, u: 'SchedulerSqlAlchemyUnitOfWork', job_id: UUID
     ) -> SchedulerJob:
         """Retrieve job by id or raise not found error."""
         job = u.jobs.get_by_id(job_id)
@@ -156,7 +154,7 @@ class SchedulerServiceLayerManager:
         u: 'SchedulerSqlAlchemyUnitOfWork',
         job: SchedulerJob,
         data: Dict[str, Any],
-    ) -> set[str]:
+    ) -> Set[str]:
         """Validate editable data before applying changes."""
         cron_schedule = data.get('cron_schedule')
         if (
@@ -167,7 +165,7 @@ class SchedulerServiceLayerManager:
             message = 'Invalid cron expression'
             raise JobInvalidCronExpression(message)
 
-        new_name = data.get("name")
+        new_name = data.get('name')
         if new_name is not None:
             existing = u.jobs.get_by_name(new_name)
             if existing and existing.id != job.id:
@@ -192,7 +190,7 @@ class SchedulerServiceLayerManager:
 
     def delete_job(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Delete scheduler job by its ID."""
-        job_id = payload["id"]
+        job_id = payload['id']
 
         with self.uow() as uow:
             job = uow.jobs.get_by_id(job_id)
@@ -214,16 +212,14 @@ class SchedulerServiceLayerManager:
 
             return SchedulerJobSerializer.to_web(job)
 
-
     def get_job(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Get scheduler job by its UUID."""
-        job_id = payload["id"]
+        job_id = payload['id']
 
         with self.uow() as uow:
             job = self._retrieve_job(uow, job_id)
 
             return SchedulerJobSerializer.to_web(job)
-
 
     # @periodic_task(interval=10) #  РЕАЛИЗУЙ МЕТОД ДЛЯ МОНИТОРИНГА
     # def monitoring(self) -> None:

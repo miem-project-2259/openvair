@@ -8,7 +8,7 @@ management of cron jobs
 
 import uuid
 import datetime
-from typing import Any
+from typing import Any, Dict
 
 from crontab import CronTab, CronItem  # type: ignore
 
@@ -39,17 +39,18 @@ class CronJobScheduler(BaseScheduler):
     managing job metadata, and handling task positioning (before/after).
     """
 
-    def __init__(self, cron_obj: CronTab) -> None:
-        """Initialize the CronJobScheduler.
-
-        Args:
-            cron_obj (CronTab): The crontab object used for system interaction.
-        """
-        super().__init__(cron_obj)
+    def __init__(self) -> None:
+        """Initialize the CronJobScheduler."""
+        super().__init__()
+        self._cron = CronTab(user=True)
 
     def __create_job(self, req: RequestCreateJob) -> CronItem:
         with self._cron as cron:
-            before_job = self._job(req.before_job_id).cron_item if req.before_job_id else None # noqa: E501
+            before_job = (
+                self._job(req.before_job_id).cron_item
+                if req.before_job_id
+                else None
+            )
             job = cron.new(
                 command=req.command,
                 comment=req.description or '',
@@ -58,14 +59,14 @@ class CronJobScheduler(BaseScheduler):
             job.setall(req.cron_schedule)
         return job
 
-    def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
+    def create(self, creation_data: Dict[str, Any]) -> Dict[str, Any]:  # pyright: ignore[reportExplicitAny]
         """Create a scheduled task and store its metadata.
 
         Args:
-            creation_data (dict[str, Any]): Dictionary with job creation data.
+            creation_data (Dict[str, Any]): Dictionary with job creation data.
 
         Returns:
-            dict[str, Any]: Dictionary containing the new job_id.
+            Dict[str, Any]: Dictionary containing the new job_id.
         """
         try:
             req = RequestCreateJob.model_validate(creation_data)
@@ -94,15 +95,15 @@ class CronJobScheduler(BaseScheduler):
             LOG.error(f'Failed to create a scheduled task: {error}')
             raise
 
-    def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]: # noqa: C901
-        #TODO: Ruff ругается C901 `edit` is too complex (7 > 5)
+    def edit(self, editing_data: Dict[str, Any]) -> Dict[str, Any]:  # noqa: C901
+        # TODO: Ruff ругается C901 `edit` is too complex (7 > 5)
         """Modify an existing scheduled task.
 
         Args:
-            editing_data (dict[str, Any]): Dictionary with updated job data.
+            editing_data (Dict[str, Any]): Dictionary with updated job data.
 
         Returns:
-            dict[str, Any]: Updated job representation.
+            Dict[str, Any]: Updated job representation.
         """
         try:
             req = RequestUpdateJob.model_validate(editing_data)
@@ -134,7 +135,7 @@ class CronJobScheduler(BaseScheduler):
                     new_job = self.__create_job(c_req)
                     job.cron_item = new_job
 
-                job_schedule = job.cron_item.schedule() # noqa: F841
+                job_schedule = job.cron_item.schedule()  # noqa: F841
                 # noqa: RUF003 TODO: Элис, привет, это Рустам) А для чего эта переменная?
 
                 return self.get(str(req.job_id))
@@ -143,14 +144,14 @@ class CronJobScheduler(BaseScheduler):
             LOG.error(f'Failed to edit scheduled tasks: {error}')
             raise
 
-    def get(self, job_id: str) -> dict[str, Any]:
+    def get(self, job_id: str) -> Dict[str, Any]:
         """Retrieve job details by ID.
 
         Args:
             job_id (str): UUID of the job as a string.
 
         Returns:
-            dict[str, Any]: Job details including schedule and run times.
+            Dict[str, Any]: Job details including schedule and run times.
         """
         try:
             with self._cron:

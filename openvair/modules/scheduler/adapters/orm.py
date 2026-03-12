@@ -1,6 +1,7 @@
 """ORM models for scheduler module."""
 
 import uuid
+from typing import Union
 from datetime import datetime
 
 from sqlalchemy import Text, String, Boolean, DateTime
@@ -31,11 +32,11 @@ class SchedulerJob(Base):
 
     __tablename__ = 'scheduler_jobs'
 
-    id: Mapped[uuid.UUID] = mapped_column( # Прилетают от Саши
+    id: Mapped[uuid.UUID] = mapped_column(  # Прилетают от Саши
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[Union[str, None]] = mapped_column(Text, nullable=True)
     cron_schedule: Mapped[str] = mapped_column(String(255), nullable=False)
     command: Mapped[str] = mapped_column(Text, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -43,10 +44,10 @@ class SchedulerJob(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now, onupdate=datetime.now
     )
-    last_run: Mapped[datetime | None] = mapped_column(
+    last_run: Mapped[Union[datetime, None]] = mapped_column(
         DateTime, nullable=True
     )  # Пока не знаем как заполнять
-    next_run: Mapped[datetime | None] = mapped_column(
+    next_run: Mapped[Union[datetime, None]] = mapped_column(
         DateTime, nullable=True
     )  # Пока не знаем как заполнять
     before_job_id = mapped_column(UUID(as_uuid=True), nullable=True)
