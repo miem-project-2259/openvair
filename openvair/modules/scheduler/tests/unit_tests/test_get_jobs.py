@@ -1,11 +1,13 @@
-import pytest
-from unittest.mock import Mock, AsyncMock
 from uuid import uuid4
+from unittest.mock import Mock, AsyncMock
+from pytest_mock import MockerFixture
+
+import pytest
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_get_jobs_success(mocker):
+async def test_get_jobs_success(mocker: MockerFixture) -> None:
     from openvair.modules.scheduler.entrypoints import api as scheduler_api
 
     crud = Mock()
@@ -36,7 +38,7 @@ async def test_get_jobs_success(mocker):
     assert result.data is fake_page
 
 
-async def test_get_job_success(mocker):
+async def test_get_job_success(mocker: MockerFixture) -> None:
     from openvair.modules.scheduler.entrypoints import api as scheduler_api
 
     job_id = uuid4()
@@ -59,7 +61,7 @@ async def test_get_job_success(mocker):
     assert result.data is fake_job
 
 
-async def test_create_job_success(mocker):
+async def test_create_job_success(mocker: MockerFixture) -> None:
     from openvair.modules.scheduler.entrypoints import api as scheduler_api
 
     # фейковые входные данные
@@ -88,7 +90,7 @@ async def test_create_job_success(mocker):
     assert result.data is fake_job
 
 
-async def test_edit_job_success(mocker):
+async def test_edit_job_success(mocker: MockerFixture) -> None:
     from openvair.modules.scheduler.entrypoints import api as scheduler_api
 
     # входные данные
@@ -122,7 +124,7 @@ async def test_edit_job_success(mocker):
     assert result.data is fake_updated_job
 
 
-async def test_delete_job_success(mocker):
+async def test_delete_job_success(mocker: MockerFixture) -> None:
     from openvair.modules.scheduler.entrypoints import api as scheduler_api
 
     # входные данные
