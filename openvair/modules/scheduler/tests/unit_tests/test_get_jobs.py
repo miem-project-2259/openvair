@@ -1,8 +1,10 @@
+# ruff: noqa: D103, D100
+
 from uuid import uuid4
 from unittest.mock import Mock, AsyncMock
-from pytest_mock import MockerFixture
 
 import pytest
+from pytest_mock import MockerFixture
 
 pytestmark = pytest.mark.asyncio
 

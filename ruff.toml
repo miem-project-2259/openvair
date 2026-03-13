@@ -198,4 +198,3 @@ max-nested-blocks = 5
 "openvair/modules/network/tests/domain/bridges/utils/test_ovs_lib.py" = ["ALL"]
 "openvair/alembic/**.py" = ["ALL"]
 "openvair/modules/__init__.py" = ["ALL"]
-"openvair/modules/**/tests/**.py" = ["ALL"]
