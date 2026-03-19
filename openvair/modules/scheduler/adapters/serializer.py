@@ -3,7 +3,7 @@
 Provides conversion logic between ORM models and DTOs used at API and domain
 layers.
 
-Classes: WIP NEED TO CONVERT TO DTO!!!
+Classes: TODO: NEED TO CONVERT TO DTO!!!
     - ApiSerializer: ORM <-> API DTO
     - DomainSerializer: ORM <-> Domain DTO
     - CreateSerializer: Create DTO -> ORM
@@ -50,7 +50,6 @@ class SchedulerJobSerializer:
     def to_domain(db_model: SchedulerJob) -> Dict[str, Any]:
         """Gathering attributes to send to domain layer for job creation."""
         return {
-            'id': str(db_model.id),
             'name': db_model.name,
             'description': db_model.description,
             'cron_schedule': db_model.cron_schedule,

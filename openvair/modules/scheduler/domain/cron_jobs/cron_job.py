@@ -6,9 +6,11 @@ This module defines the `CronJobScheduler` concrete class that allows for
 management of cron jobs
 """
 
+from __future__ import annotations
+
 import uuid
 import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from crontab import CronTab, CronItem  # type: ignore
 
@@ -39,10 +41,13 @@ class CronJobScheduler(BaseScheduler):
     managing job metadata, and handling task positioning (before/after).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, crontab: Optional[CronTab] = None) -> None:
         """Initialize the CronJobScheduler."""
         super().__init__()
-        self._cron = CronTab(user=True)
+        if crontab is not None:
+            self._cron = crontab
+        else:
+            self._cron = CronTab(user=True)
 
     def __create_job(self, req: RequestCreateJob) -> CronItem:
         with self._cron as cron:
@@ -51,10 +56,11 @@ class CronJobScheduler(BaseScheduler):
                 if req.before_job_id
                 else None
             )
+            before_arg = None if before_job is None else [before_job]
             job = cron.new(
                 command=req.command,
                 comment=req.description or '',
-                before=before_job,
+                before=before_arg,
             )
             job.setall(req.cron_schedule)
         return job
@@ -106,9 +112,11 @@ class CronJobScheduler(BaseScheduler):
             Dict[str, Any]: Updated job representation.
         """
         try:
+            job_id_str = str(editing_data.get('id'))
+            job_uuid = uuid.UUID(job_id_str)
             req = RequestUpdateJob.model_validate(editing_data)
             with self._cron as cron:
-                job = self._job(req.job_id)
+                job = self._job(job_uuid)
 
                 job.updated_at = datetime.datetime.now()
 
@@ -127,7 +135,7 @@ class CronJobScheduler(BaseScheduler):
                         name=job.name,
                         description=job.cron_item.comment,
                         cron_schedule=str(job.cron_item.slices),
-                        command=job.cron_item.command,
+                        command=job.cron_item.command,  # type: ignore[arg-type]
                         before_job_id=req.before_job_id,
                         after_job_id=None,
                     )
@@ -135,10 +143,7 @@ class CronJobScheduler(BaseScheduler):
                     new_job = self.__create_job(c_req)
                     job.cron_item = new_job
 
-                job_schedule = job.cron_item.schedule()  # noqa: F841
-                # noqa: RUF003 TODO: Элис, привет, это Рустам) А для чего эта переменная?
-
-                return self.get(str(req.job_id))
+                return self.get(job_id_str)
 
         except SchedulerDomainException as error:
             LOG.error(f'Failed to edit scheduled tasks: {error}')
@@ -166,7 +171,7 @@ class CronJobScheduler(BaseScheduler):
                     name=job.name,
                     description=job.cron_item.comment,
                     cron_schedule=str(job.cron_item.slices),
-                    command=job.cron_item.command,
+                    command=job.cron_item.command, # type: ignore[arg-type]
                     enabled=job.cron_item.is_enabled(),
                     before_job_id=job.next_id,
                     after_job_id=None,

@@ -102,8 +102,11 @@ class SchedulerServiceLayerManager:
 
             self.domain_rpc.call(
                 method_name='create',
-                scheduler_data=domain_payload,
-                creation_data=domain_payload
+                 data_for_manager={
+                    'type': 'system_cron',
+                    'user': 'root'
+                    },
+                data_for_method=domain_payload
             )
 
             return SchedulerJobSerializer.to_web(new_job)
@@ -129,10 +132,11 @@ class SchedulerServiceLayerManager:
 
             self.domain_rpc.call(
                 method_name='edit',
-                scheduler_data=domain_payload,
-                data_for_method={
-                    'editing_data': domain_payload
-                },
+                 data_for_manager={
+                    'type': 'system_cron',
+                    'user': 'root'
+                    },
+                data_for_method=domain_payload
             )
 
             return SchedulerJobSerializer.to_web(job)
@@ -202,10 +206,11 @@ class SchedulerServiceLayerManager:
 
             self.domain_rpc.call(
                 method_name='delete',
-                data_for_method=
-                {
-                    'job_id': str(job_id)
-                },
+                data_for_manager={
+                    'type': 'system_cron',
+                    'user': 'root'
+                    },
+                data_for_method={'job_id': str(job_id)}
             )
 
             return SchedulerJobSerializer.to_web(job)
