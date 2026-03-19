@@ -11,11 +11,13 @@ from uuid import UUID
 from typing import Any, Optional
 
 from crontab import CronTab, CronItem
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 
 
 class JobMetadata(BaseModel):
-    cron_item: CronItem
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    cron_item: Any  # CronItem or any duck-typed compatible object
     name: str
     created_at: datetime.datetime
     updated_at: Optional[datetime.datetime] = Field(default=None)

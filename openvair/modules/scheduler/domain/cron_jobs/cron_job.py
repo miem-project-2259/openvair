@@ -77,7 +77,8 @@ class CronJobScheduler(BaseScheduler):
         try:
             req = RequestUpdateJob.model_validate(editing_data)
             with self._cron as cron:
-                job = self._job(req.job_id)
+                job_uuid = uuid.UUID(req.job_id)
+                job = self._job(job_uuid)
 
                 job.updated_at = datetime.datetime.now()
 
@@ -103,14 +104,19 @@ class CronJobScheduler(BaseScheduler):
 
                     new_job = self.__create_job(c_req)
                     job.cron_item = new_job
+                    job.next_id = req.before_job_id
+                    self._job(req.before_job_id).previous_id = job_uuid
 
                 job_schedule = job.cron_item.schedule()
 
-                return self.get(str(req.job_id))
+                return self.get(str(job_uuid))
 
         except SchedulerDomainException as error:
             LOG.error(f'Failed to edit scheduled tasks: {error}')
             raise
+
+    def list_all(self) -> list[dict[str, Any]]:
+        return [self.get(str(job_id)) for job_id in self.jobs]
 
     def get(self, job_id: str) -> dict[str, Any]:
         try:
