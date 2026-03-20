@@ -128,7 +128,6 @@ class SchedulerServiceLayerManager:
 
             LOG.info('Casting to domain layer to edit a job')
             domain_payload = SchedulerJobSerializer.to_domain(job)
-            domain_payload['job_id'] = str(job_id)
 
             self.domain_rpc.call(
                 method_name='edit',

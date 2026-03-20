@@ -206,7 +206,7 @@ class RequestUpdateJob(APIConfigRequestModel):
         if is_command_forbidden(value):
             msg = "Command contains forbidden or unsafe operations"
             raise ValueError(msg)
-        if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
+        if not re.match(r"^[a-zA-Z0-9_\-./ >&|;]+$", value):
             msg = "Command contains invalid characters"
             raise ValueError(msg)
 
