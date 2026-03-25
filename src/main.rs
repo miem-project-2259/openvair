@@ -20,6 +20,8 @@ mod cmd_runner;
 
 mod pkg_management;
 
+mod project_config;
+
 fn main() {
     println!("Hello, world!");
 }
