@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.101"
+clap = { version = "4.6.0", features = ["derive"] }
+command-macros = "0.2.9"
+env_logger = "0.11.10"
+log = "0.4.29"
+serde = { version = "1.0.228", features = ["derive"] }
