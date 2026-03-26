@@ -37,18 +37,19 @@ class CreateJobServiceCommandDTO(BaseDTOModel):
     """
 
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     cron_schedule: str
     command: str
     enabled: bool
-    before_job_id: UUID
-    after_job_id: UUID
+    before_job_id: Optional[UUID] = None
+    after_job_id: Optional[UUID] = None
 
 
 class UpdateJobServiceCommandDTO(BaseDTOModel):
     """DTO for updating job fields at the service layer.
 
     Attributes:
+        id (UUID) : UUID of the job.
         name (Optional[str]): Updated name for the job.
         description (Optional[str]): Updated description.
         cron_schedule (Optional[str]): Updated CRON schedule.
@@ -57,14 +58,14 @@ class UpdateJobServiceCommandDTO(BaseDTOModel):
         before_job_id (Optional[UUID]): Updated dependency before another job.
         after_job_id (Optional[UUID]): Updated dependency after another job.
     """
-
-    name: Optional[str]
-    description: Optional[str]
-    cron_schedule: Optional[str]
-    command: Optional[str]
-    enabled: Optional[bool]
-    before_job_id: Optional[UUID]
-    after_job_id: Optional[UUID]
+    id: UUID
+    name: Optional[str] = None
+    description: Optional[str] = None
+    cron_schedule: Optional[str] = None
+    command: Optional[str] = None
+    enabled: Optional[bool] = None
+    before_job_id: Optional[UUID] = None
+    after_job_id: Optional[UUID] = None
 
 
 class DeleteJobServiceCommandDTO(BaseDTOModel):

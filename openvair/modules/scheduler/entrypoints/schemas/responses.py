@@ -90,7 +90,7 @@ class JobResponse(APIConfigResponseModel):
         examples=["2024-05-28T10:45:21.000Z"],
         description="Timestamp when the job was created",
     )
-    updated_at: datetime = Field(
+    updated_at: Optional[datetime] = Field(
         ...,
         examples=["2024-06-01T09:12:45.000Z"],
         description="Timestamp when the job was last updated",

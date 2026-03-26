@@ -5,12 +5,11 @@ factories based on scheduler types
 """
 
 import abc
-from typing import Dict, ClassVar, cast
+from typing import Dict, ClassVar, Optional, cast
 
 from crontab import CronTab
 from pydantic import Field, BaseModel
 
-# from openvair.modules.scheduler.adapters.dto.internal.models import DomainSchedulerModelDTO
 from openvair.modules.scheduler.domain.base import BaseScheduler
 from openvair.modules.scheduler.domain.cron_jobs.cron_job import (
     CronJobScheduler,
@@ -20,8 +19,8 @@ from openvair.modules.scheduler.domain.cron_jobs.cron_job import (
 class DomainSchedulerModelDTO(BaseModel):
     """Заглушка"""
 
-    scheduler_type: str = Field(..., alias="type")
-    user: str | None = None
+    scheduler_type: str = Field(..., alias='type')
+    user: Optional[str] = None
 
 
 class AbstractSchedulerFactory(metaclass=abc.ABCMeta):
@@ -53,6 +52,7 @@ class AbstractSchedulerFactory(metaclass=abc.ABCMeta):
 
 class SchedulerFactory(AbstractSchedulerFactory):
     """Concrete factory for scheduler creation."""
+
     _scheduler_classes: ClassVar = {
         'system_cron': CronJobScheduler,
     }
@@ -77,7 +77,8 @@ class SchedulerFactory(AbstractSchedulerFactory):
 
         scheduler_class = self._scheduler_classes.get(dto.scheduler_type)
         if not scheduler_class:
-            raise ValueError(f"Unknown scheduler type: '{dto.scheduler_type}'")
+            error_msg = f"Unknown scheduler type: '{dto.scheduler_type}'"
+            raise ValueError(error_msg)
 
         cron_obj = CronTab(user=dto.user)
         scheduler_manager = scheduler_class(cron_obj=cron_obj)

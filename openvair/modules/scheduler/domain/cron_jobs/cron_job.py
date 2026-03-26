@@ -1,19 +1,26 @@
+# mypy: disable-error-code="no-any-unimported, unused-ignore"
+
 """Cron Job Scheduler
 
-This module defines the `CronJobScheduler` concrete class that allows for
+This module defines the `CronJobScheduler` concrete class that allows
 management of cron jobs
 """
 
+from __future__ import annotations
+
 import uuid
 import datetime
-from typing import Any
+from typing import Any, Dict, Optional
 
-from crontab import CronTab, CronItem
+from crontab import CronTab, CronItem  # type: ignore
 
 from openvair.libs.log import get_logger
-from openvair.modules.scheduler.domain.base import JobMetadata, BaseScheduler
+from openvair.modules.scheduler.domain.base import BaseScheduler
 from openvair.modules.scheduler.domain.exception import (
     CronJobNotFound,
+)
+from openvair.modules.scheduler.shared.base_exceptions import (
+    SchedulerDomainException,
 )
 from openvair.modules.scheduler.entrypoints.schemas.requests import (
     RequestCreateJob,
@@ -23,136 +30,245 @@ from openvair.modules.scheduler.entrypoints.schemas.responses import (
     JobResponse,
     JobCreateResponse,
 )
-from openvair.modules.scheduler.shared.base_exceptions import (
-    SchedulerDomainException,
-)
 
 LOG = get_logger(__name__)
 
 
 class CronJobScheduler(BaseScheduler):
-    def __init__(self, cron_obj: CronTab) -> None:
-        super().__init__(cron_obj)
+    """Concrete implementation of BaseScheduler for system cron jobs.
 
-    def __create_job(self, req: RequestCreateJob) -> CronItem:
+    This class provides specific logic for interacting with the system crontab,
+    managing job metadata, and handling task positioning (before/after).
+    """
+
+    def __init__(self, cron_obj: Optional[CronTab] = None) -> None:
+        """Initialize the CronJobScheduler."""
+        super().__init__()
+        if cron_obj is not None:
+            self._cron = cron_obj
+        else:
+            self._cron = CronTab(user=True)
+
+    def __create_job(self, req: RequestCreateJob, job_id_str: str) -> CronItem:
         with self._cron as cron:
-            before_job = self._job(req.before_job_id).cron_item if req.before_job_id else None
+            before_job = None
+            if req.before_job_id:
+                try: #noqa: SIM105
+                    before_job = self._find_cron_item(str(req.before_job_id),
+                    cron)
+                except CronJobNotFound:
+                    pass
+
+            before_arg = None if before_job is None else [before_job]
+
+            desc = req.description or ''
+            custom_comment = f"{desc} OPENVAIR_JOB_ID:[{job_id_str}]".strip()
+
             job = cron.new(
                 command=req.command,
-                comment=req.description or '',
-                before=before_job,
+                comment=custom_comment,
+                before=before_arg,
             )
             job.setall(req.cron_schedule)
         return job
 
-    def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
+    def create(self, creation_data: Dict[str, Any]) -> Dict[str, Any]:  # pyright: ignore[reportExplicitAny]
+        """Create a scheduled task and store its metadata.
+
+        Args:
+            creation_data (Dict[str, Any]): Dictionary with job creation data.
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the new job_id.
+        """
         try:
-            req = RequestCreateJob.model_validate(creation_data)
-            job_id = uuid.uuid4()
-            next_id = None
+            job_id_str = str(creation_data['id'])
+            job_id = uuid.UUID(job_id_str)
 
-            if req.before_job_id:
-                next_id = req.before_job_id
-                before_job = self._job(next_id)
-                before_job.previous_id = job_id
+            validation_data = creation_data.copy()
+            validation_data.pop('id', None)
 
-            cron_job = self.__create_job(req)
+            req = RequestCreateJob.model_validate(validation_data)
 
-            self.jobs[job_id] = JobMetadata(
-                cron_item=cron_job,
-                name=req.name,
-                created_at=datetime.datetime.now(),
-                updated_at=None,
-                next_id=next_id,
-            )
+            self.__create_job(req, job_id_str)
 
             resp = JobCreateResponse(job_id=job_id)
-            return resp.model_dump()
+            return resp.model_dump(mode='json')
 
         except SchedulerDomainException as error:
             LOG.error(f'Failed to create a scheduled task: {error}')
             raise
 
-    def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]:
+    def get(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Retrieve job details by ID.
+
+        Args:
+            job_id (str): UUID of the job as a string.
+            data (Dict[str, Any]): Dictionary with job data from
+            service layer enriched by domain layer.
+
+        Returns:
+            Dict[str, Any]: Job details including schedule and run times.
+        """
         try:
-            req = RequestUpdateJob.model_validate(editing_data)
+            job_id_str = str(data.get('id'))
+            job_uuid = uuid.UUID(job_id_str)
+
             with self._cron as cron:
-                job = self._job(req.job_id)
-
-                job.updated_at = datetime.datetime.now()
-
-                if req.command:
-                    job.cron_item.set_command(req.command)
-                if req.description:
-                    job.cron_item.set_comment(req.description)
-                if req.cron_schedule:
-                    job.cron_item.setall(req.cron_schedule)
-                if req.name:
-                    job.name = req.name
-
-                if req.before_job_id:
-                    cron.remove(job.cron_item)
-                    c_req = RequestCreateJob(
-                        name=job.name,
-                        description=job.cron_item.comment,
-                        cron_schedule=str(job.cron_item.slices),
-                        command=job.cron_item.command,
-                        before_job_id=req.before_job_id,
-                        after_job_id=None,
-                    )
-
-                    new_job = self.__create_job(c_req)
-                    job.cron_item = new_job
-
-                job_schedule = job.cron_item.schedule()
-
-                return self.get(str(req.job_id))
-
-        except SchedulerDomainException as error:
-            LOG.error(f'Failed to edit scheduled tasks: {error}')
-            raise
-
-    def get(self, job_id: str) -> dict[str, Any]:
-        try:
-            with self._cron:
-                job_uuid = uuid.UUID(job_id)
-                job = self._job(job_uuid)
-                job_schedule = job.cron_item.schedule()
-
-                # TODO recreate job if before is set
+                item = self._find_cron_item(job_id_str, cron)
+                job_schedule = item.schedule()
 
                 resp = JobResponse(
                     id=job_uuid,
-                    name=job.name,
-                    description=job.cron_item.comment,
-                    cron_schedule=str(job.cron_item.slices),
-                    command=job.cron_item.command,
-                    enabled=job.cron_item.is_enabled(),
-                    before_job_id=job.next_id,
-                    after_job_id=None,
-                    created_at=job.created_at,
-                    updated_at=job.updated_at,
-                    last_run=job_schedule.get_last(),
+                    name=data.get('name', 'Unknown'),
+                    description=item.comment.split(' OPENVAIR')[0].strip(),
+                    cron_schedule=str(item.slices),
+                    command=item.command, # type: ignore
+                    enabled=item.is_enabled(),
+                    before_job_id=data.get('before_job_id'),
+                    after_job_id=data.get('after_job_id'),
+                    created_at=data.get('created_at', datetime.datetime.now()),
+                    updated_at=data.get('updated_at'),
+                    last_run=job_schedule.get_prev(),
                     next_run=job_schedule.get_next(),
                 )
 
-            return resp.model_dump()
+            return resp.model_dump(mode='json')
         except SchedulerDomainException as error:
             LOG.error(f'Failed to get scheduled task: {error}')
             raise
 
-    def delete(self, job_id: str) -> None:
+    def delete(self, data: Dict[str, Any]) -> None:
+        """Delete job by UUID.
+
+        Args:
+            data (Dict[str, Any]): Dictionary with job_id.
+        """
         try:
-            job_uuid = uuid.UUID(job_id)
-            job = self._job(job_uuid)
+            job_id_str = str(data['job_id'])
+            target_comment = f"OPENVAIR_JOB_ID:[{job_id_str}]"
+
             with self._cron as cron:
-                cron.remove(job.cron_item)
-            del self.jobs[job_uuid]
+                for item in cron:
+                    if item.comment and target_comment in item.comment:
+                        cron.remove(item)
+
+        except (KeyError, OSError) as error:
+            msg = f'Failed to delete job {data.get("job_id")}: {error}'
+            LOG.error(msg)
+            raise SchedulerDomainException(str(error))
+
+    def list_all(self, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]: #noqa: C901
+        """Retrieve all scheduled tasks.
+
+        Args:
+            data (Dict[str, Any]): Dictionary with request data (can be empty).
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the list of jobs.
+        """
+        if data is None:
+            data = {}
+
+        try:
+            jobs_list = []
+
+            # Service layer should pass DB objects to construct full responses,
+            # but if it doesn't, we return what we can find in OS.
+            db_jobs = data.get('jobs_from_db', [])
+            db_jobs_map = {str(j.get('id')): j for j in db_jobs}
+
+            with self._cron as cron:
+                for item in cron:
+                    if item.comment and "OPENVAIR_JOB_ID:[" in item.comment:
+                        # Extract UUID from comment
+                        # "some desc OPENVAIR_JOB_ID:[uuid-string]"
+                        ext = item.comment.split('OPENVAIR_JOB_ID:[')[-1].strip(']') #noqa: E501
+
+                        try:
+                            job_uuid = uuid.UUID(ext)
+                        except ValueError:
+                            continue # Ignore malformed IDs
+
+                        db_info = db_jobs_map.get(ext, {})
+
+                        resp = JobResponse(
+                            id=job_uuid,
+                            name=db_info.get('name', 'Unknown'),
+                            description=item.comment.split(' OPENVAIR')[0].strip(), #noqa: E501
+                            cron_schedule=str(item.slices),
+                            command=item.command, # type: ignore
+                            enabled=item.is_enabled(),
+                            before_job_id=db_info.get('before_job_id'),
+                            after_job_id=db_info.get('after_job_id'),
+                            created_at=db_info.get('created_at',
+                                                   datetime.datetime.now()),
+                            updated_at=db_info.get('updated_at'),
+                            last_run=item.schedule().get_prev(datetime.datetime),
+                            next_run=item.schedule().get_next(datetime.datetime),
+                        )
+                        jobs_list.append(resp.model_dump(mode='json'))
+
+            return {'jobs': jobs_list} #noqa: TRY300
+
         except SchedulerDomainException as error:
-            LOG.error(f'Failed to delete scheduled task: {error}')
+            LOG.error(f'Failed to get all scheduled tasks: {error}')
             raise
 
-    def _job(self, key: uuid.UUID) -> JobMetadata:
-        if key not in self.jobs:
-            raise CronJobNotFound(str(key))
-        return self.jobs[key]
+    def _find_cron_item(self, job_id_str: str, cron: CronTab) -> CronItem:
+        """Helper to search job in OS crontab by tag in comment"""
+        target_tag = f"OPENVAIR_JOB_ID:[{job_id_str}]"
+        for item in cron:
+            if item.comment and target_tag in item.comment:
+                return item
+        raise CronJobNotFound(job_id_str)
+
+    def edit(self, editing_data: Dict[str, Any]) -> Dict[str, Any]: #noqa: C901
+        """Modify an existing scheduled task."""
+        try:
+            job_id_str = str(editing_data.get('id'))
+
+            # Remove id from payload because it is only needed for search
+            # and not for editing
+
+            validation_data = editing_data.copy()
+            validation_data.pop('id', None)
+
+            req = RequestUpdateJob.model_validate(validation_data)
+
+            with self._cron as cron:
+                item = self._find_cron_item(job_id_str, cron)
+
+                if req.enabled is not None:
+                    item.enable(req.enabled)
+
+                if req.command:
+                    item.set_command(req.command)
+
+                if req.description or req.name:
+                    desc = req.description or item.comment.split(' OPENVAIR')[0]
+                    item.set_comment(f"{desc} OPENVAIR_JOB_ID:[{job_id_str}]")
+
+                if req.cron_schedule:
+                    item.setall(req.cron_schedule)
+
+                if req.before_job_id:
+                    cron.remove(item)
+                    clean_desc = item.comment.split(' OPENVAIR')[0]
+                    c_req = RequestCreateJob(
+                        name=req.name or editing_data.get('name', ''),
+                        description=clean_desc,
+                        cron_schedule=str(item.slices),
+                        command=item.command,
+                        before_job_id=req.before_job_id,
+                        after_job_id=None,
+                    )
+                    new_item = self.__create_job(c_req, job_id_str)
+                    new_item.enable(req.enabled if req.enabled is not None
+                                    else item.is_enabled())
+
+            return self.get(editing_data)
+
+        except SchedulerDomainException as error:
+            LOG.error(f'Failed to edit scheduled task: {error}')
+            raise
