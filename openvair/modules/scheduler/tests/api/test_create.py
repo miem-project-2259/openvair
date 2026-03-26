@@ -1,9 +1,13 @@
-import pytest
-from fastapi import status
+"""API tests for creating scheduler jobs."""
+
 from unittest.mock import patch
 
-def test_create_job_success(client):
-    """Успешное создание задачи через API"""
+from fastapi import status
+from fastapi.testclient import TestClient
+
+
+def test_create_job_success(client: TestClient) -> None:
+    """Successful job creation via API."""
     job_id = "74a18c88-04b7-4d6a-a50a-c91203b234db"
     payload = {
         "name": "daily_backup",
@@ -12,7 +16,7 @@ def test_create_job_success(client):
         "command": "/usr/bin/backup",
         "enabled": True
     }
-    
+
     with patch(
         'openvair.modules.scheduler.entrypoints.api.SchedulerCrud.create_job'
     ) as mock_method:
@@ -31,8 +35,9 @@ def test_create_job_success(client):
         assert response.status_code == status.HTTP_201_CREATED
         assert response.json()["data"]["name"] == "daily_backup"
 
-def test_create_job_forbidden_command(client):
-    """Проверка блокировки опасных команд (валидация Pydantic)"""
+
+def test_create_job_forbidden_command(client: TestClient) -> None:
+    """Test blocking of dangerous commands (Pydantic validation)."""
     payload = {
         "name": "malicious",
         "cron_schedule": "* * * * *",
@@ -42,8 +47,9 @@ def test_create_job_forbidden_command(client):
     response = client.post("/scheduler/jobs", json=payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-def test_create_job_invalid_cron(client):
-    """Проверка блокировки невалидного cron-выражения"""
+
+def test_create_job_invalid_cron(client: TestClient) -> None:
+    """Test blocking of invalid cron expressions."""
     payload = {
         "name": "bad_cron",
         "cron_schedule": "99 99 99 99 99",

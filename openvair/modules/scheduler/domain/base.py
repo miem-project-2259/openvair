@@ -91,7 +91,7 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def list_all(self, data: dict[str, Any]) -> dict[str, Any]:
+    def list_all(self, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Retrieve all scheduled tasks managed by this scheduler.
 
         Args:

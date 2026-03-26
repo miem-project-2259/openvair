@@ -1,11 +1,15 @@
-import pytest
-from fastapi import status
+"""API tests for editing scheduler jobs."""
+
 from unittest.mock import patch
 
-def test_edit_job_name(client):
-    """Успешное изменение имени задачи"""
+from fastapi import status
+from fastapi.testclient import TestClient
+
+
+def test_edit_job_name(client: TestClient) -> None:
+    """Successful job editing via API."""
     job_id = "74a18c88-04b7-4d6a-a50a-c91203b234db"
-    
+
     with patch(
         'openvair.modules.scheduler.entrypoints.api.SchedulerCrud.edit_job'
     ) as mock_method:
@@ -22,6 +26,6 @@ def test_edit_job_name(client):
 
         patch_payload = {"name": "new_name"}
         response = client.patch(f"/scheduler/{job_id}", json=patch_payload)
-        
+
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["data"]["name"] == "new_name"

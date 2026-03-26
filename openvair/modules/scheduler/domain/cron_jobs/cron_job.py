@@ -2,7 +2,7 @@
 
 """Cron Job Scheduler
 
-This module defines the `CronJobScheduler` concrete class that allows for
+This module defines the `CronJobScheduler` concrete class that allows
 management of cron jobs
 """
 
@@ -158,7 +158,7 @@ class CronJobScheduler(BaseScheduler):
             LOG.error(msg)
             raise SchedulerDomainException(str(error))
 
-    def list_all(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def list_all(self, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]: #noqa: C901
         """Retrieve all scheduled tasks.
 
         Args:
@@ -167,6 +167,9 @@ class CronJobScheduler(BaseScheduler):
         Returns:
             Dict[str, Any]: Dictionary containing the list of jobs.
         """
+        if data is None:
+            data = {}
+
         try:
             jobs_list = []
 
@@ -188,7 +191,6 @@ class CronJobScheduler(BaseScheduler):
                             continue # Ignore malformed IDs
 
                         db_info = db_jobs_map.get(ext, {})
-                        job_schedule = item.schedule()
 
                         resp = JobResponse(
                             id=job_uuid,
@@ -202,8 +204,8 @@ class CronJobScheduler(BaseScheduler):
                             created_at=db_info.get('created_at',
                                                    datetime.datetime.now()),
                             updated_at=db_info.get('updated_at'),
-                            last_run=job_schedule.get_prev(),
-                            next_run=job_schedule.get_next(),
+                            last_run=item.schedule().get_prev(datetime.datetime),
+                            next_run=item.schedule().get_next(datetime.datetime),
                         )
                         jobs_list.append(resp.model_dump(mode='json'))
 
