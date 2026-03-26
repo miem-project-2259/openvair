@@ -1,8 +1,11 @@
 use std::process::{Command, ExitStatus, Output, Stdio};
 
 use anyhow::anyhow;
+
+#[derive(Clone, Debug, Copy)]
 pub struct CommandRunner;
 
+#[derive(Clone, Debug)]
 pub struct CommandResult {
     pub output: String,
     pub status: ExitStatus,
@@ -81,5 +84,6 @@ mod tests {
         let mut cmd_sed = Command::new("sed");
         let res = runner.pipe(cmd_src.arg("Hello world"), cmd_sed.arg("s/world/me/"));
         assert_eq!(res.output, String::from("Hello me\n"));
+        assert!(res.status.success())
     }
 }

@@ -1,4 +1,7 @@
-use std::{fs::File, io::Read};
+use std::{
+    fs::File,
+    io::{Read, Write},
+};
 
 use serde::{Deserialize, Serialize};
 use toml;
@@ -31,6 +34,11 @@ impl ProjectConfig {
 
     fn try_from_contents(contents: &str) -> anyhow::Result<Self> {
         Ok(toml::from_str::<Self>(&contents)?)
+    }
+
+    fn try_save_file(&self, path: &str) -> anyhow::Result<()> {
+        File::open(path)?.write_all(toml::to_string(self)?.as_bytes())?;
+        Ok(())
     }
 }
 

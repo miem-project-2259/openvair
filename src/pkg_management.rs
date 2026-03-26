@@ -3,17 +3,18 @@ use std::process::Command;
 
 pub trait PackageProvider {
     fn try_check_installed(&self, package_name: &str) -> anyhow::Result<bool>;
-    fn try_install(&self, package_name: &str) -> anyhow::Result<()>;
+    fn try_install(&self, package_name: &str) -> anyhow::Result<CommandResult>;
     fn check_installed(&self, package_name: &str) -> bool {
         self.try_check_installed(package_name)
             .expect(&format!("failed to check if {package_name} is installed"))
     }
-    fn install(&self, package_name: &str) {
+    fn install(&self, package_name: &str) -> CommandResult {
         self.try_install(package_name)
             .expect(&format!("failed to install {package_name}"))
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct UbuntuPackageProvider<'a> {
     runner: &'a CommandRunner,
 }
@@ -36,33 +37,15 @@ impl PackageProvider for UbuntuPackageProvider<'_> {
         return Ok(res.status.success());
     }
 
-    fn try_install(&self, package_name: &str) -> anyhow::Result<()> {
+    fn try_install(&self, package_name: &str) -> anyhow::Result<CommandResult> {
         let mut sudo_cmd = Command::new("sudo");
 
-        self.runner
+        let res = self
+            .runner
             .try_run(sudo_cmd.args(["apt-get", "install", "-y", package_name]))?;
-        Ok(())
+        Ok(res)
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::{
-        pkg_management::{PackageProvider, UbuntuPackageProvider},
-        tests::_get_runner,
-    };
-
-    #[cfg(feature = "ubuntu")]
-    #[test]
-    fn test_ubuntu_package_install() {
-        let runner = _get_runner();
-        let provider = UbuntuPackageProvider::new(&runner);
-
-        let res = provider.try_install("hello");
-        assert!(
-            provider.check_installed("hello"),
-            "failed to find installed hello package"
-        );
-        assert!(res.is_ok(), "expected install ok, got {:?}", res);
-    }
-}
+mod tests;
