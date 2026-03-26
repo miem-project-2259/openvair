@@ -1,3 +1,3 @@
 pub mod provider;
 
-pub mod installer {}
+pub mod installer;
