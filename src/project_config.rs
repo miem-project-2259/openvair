@@ -71,9 +71,14 @@ pub struct StorageConfig {
     pub data_path: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Default, Clone, Debug, Deserialize, Serialize)]
 pub struct JwtConfig {
     pub algorithm: String,
+    pub token_type: String,
+    pub access_token_expiration_minutes: u32,
+    pub refresh_token_expiration_days: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

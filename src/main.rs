@@ -1,28 +1,16 @@
 use command_macros::cmd;
 
-#[derive(Clone, Debug)]
-struct InstallerConfig {
-    user: String,
-    os: String,
-    arch: String,
-    project_name: String,
-    docs_project_name: String,
-    user_path: String,
-    project_path: String,
-    docs_project_path: String,
-    project_config_file: String,
-    dependencies_file: String,
-}
+pub mod tests;
 
-mod tests;
+pub mod cmd_runner;
 
-mod cmd_runner;
+pub mod pkg_management;
 
-mod pkg_management;
+pub mod project_config;
 
-mod project_config;
+pub mod docker;
 
-mod docker;
+pub mod openvair_manager;
 
 fn main() {
     println!("Hello, world!");
