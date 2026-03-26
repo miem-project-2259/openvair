@@ -4,9 +4,10 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use serde_valid::Validate;
 use toml;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
 pub struct ProjectConfig {
     pub database: DatabaseConfig,
     pub rabbitmq: RabbitMqConfig,
@@ -16,6 +17,7 @@ pub struct ProjectConfig {
     pub messaging: MessagingConfig,
     pub web_app: WebAppConfig,
     pub prometheus: PrometheusConfig,
+    #[validate]
     pub default_user: DefaultUserConfig,
     pub os_data: OsDataConfig,
     pub network: NetworkConfig,
@@ -93,9 +95,12 @@ pub struct PrometheusConfig {
     pub port: u32,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
 pub struct DefaultUserConfig {
+    #[validate(max_length = 30)]
+    #[validate(min_length = 5)]
     pub login: String,
+    #[validate(min_length = 5)]
     pub password: String,
 }
 
@@ -146,6 +151,8 @@ pub struct BackupResticConfig {
 
 #[cfg(test)]
 mod tests {
+    use serde_valid::Validate;
+
     use crate::project_config::ProjectConfig;
 
     #[test]
@@ -189,8 +196,8 @@ host = 'localhost'
 port = 9090
 
 [default_user]
-login = ''
-password = ''
+login = 'aaaaa'
+password = 'aaaaaaa'
 
 [os_data]
 os_type = ''
@@ -221,6 +228,7 @@ dsn = ''
 
         let conf =
             ProjectConfig::try_from_contents(contents).expect("failed to parse project config");
-        assert_eq!(conf.database.user, "aero")
+        assert_eq!(conf.database.user, "aero");
+        assert!(conf.validate().is_ok());
     }
 }

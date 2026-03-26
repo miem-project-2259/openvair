@@ -1,7 +1,7 @@
-#[cfg(feature = "ubuntu")]
 use super::*;
 use crate::tests::_get_runner;
 
+#[cfg(feature = "ubuntu")]
 #[test]
 fn test_ubuntu_package_install() {
     let runner = _get_runner();
