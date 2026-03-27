@@ -17,6 +17,9 @@ class _ConcreteScheduler(BaseScheduler):
     def get(self, job_id: str) -> dict[str, Any]:
         return {'job_id': job_id}
 
+    def list_all(self) -> list[dict[str, Any]]:
+        return []
+
 
     def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]:
         return editing_data

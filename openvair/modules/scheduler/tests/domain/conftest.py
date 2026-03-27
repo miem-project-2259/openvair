@@ -4,6 +4,7 @@ import datetime
 from typing import Any
 
 import pytest
+from crontab import CronTab, CronItem
 
 from openvair.modules.scheduler.domain.cron_jobs.cron_job import CronJobScheduler
 
@@ -21,32 +22,10 @@ class _FakeSchedule:
         return self._next
 
 
-class _FakeCronItem:
-    def __init__(self, command: str, comment: str, schedule: str) -> None:
-        self.command = command
-        self.comment = comment
-        self.slices = schedule
-        self._enabled = True
-
-    def setall(self, schedule: str) -> None:
-        self.slices = schedule
-
-    def set_command(self, command: str) -> None:
-        self.command = command
-
-    def set_comment(self, comment: str) -> None:
-        self.comment = comment
-
-    def is_enabled(self) -> bool:
-        return self._enabled
-
-    def schedule(self) -> _FakeSchedule:
-        return _FakeSchedule()
-
-
 class _FakeCronTab:
     def __init__(self) -> None:
-        self.items: list[_FakeCronItem] = []
+        self.items: list[CronItem] = []
+        self._tab = CronTab(tab='')
 
     def __enter__(self) -> _FakeCronTab:
         return self
@@ -59,9 +38,12 @@ class _FakeCronTab:
         *,
         command: str,
         comment: str,
-        before: _FakeCronItem | list[_FakeCronItem] | None = None,
-    ) -> _FakeCronItem:
-        job = _FakeCronItem(command=command, comment=comment, schedule='* * * * *')
+        before: CronItem | list[CronItem] | None = None,
+    ) -> CronItem:
+        job = self._tab.new(command=command, comment=comment)
+        job.setall('* * * * *')
+        # Replace schedule() to avoid dependency on optional croniter in tests.
+        job.schedule = lambda: _FakeSchedule()  # type: ignore[method-assign]
         if isinstance(before, list):
             before_item = before[0] if before else None
         else:
@@ -74,13 +56,14 @@ class _FakeCronTab:
             self.items.insert(index, job)
         return job
 
-    def remove(self, job: _FakeCronItem) -> None:
-        self.items.remove(job)
+    def remove(self, job: CronItem) -> None:
+        if job in self.items:
+            self.items.remove(job)
+        self._tab.remove(job)
 
 
 class _TestCronJobScheduler(CronJobScheduler):
-    def list_all(self) -> list[dict[str, Any]]:
-        return []
+    pass
 
 
 @pytest.fixture

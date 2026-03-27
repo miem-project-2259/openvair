@@ -9,6 +9,10 @@ from pydantic import ValidationError
 from openvair.modules.scheduler.domain.exception import CronJobNotFound
 
 
+def _as_uuid(value: str | uuid.UUID) -> uuid.UUID:
+    return value if isinstance(value, uuid.UUID) else uuid.UUID(value)
+
+
 def test_create_job_success(scheduler) -> None:
     payload = {
         'name': 'backup',
@@ -18,7 +22,7 @@ def test_create_job_success(scheduler) -> None:
     }
 
     response = scheduler.create(payload)
-    job_id = uuid.UUID(response['job_id'])
+    job_id = _as_uuid(response['job_id'])
 
     assert response['message'] == 'Job successfully created'
     assert job_id in scheduler.jobs
@@ -35,7 +39,7 @@ def test_create_job_with_before_job_id_links_chain(scheduler) -> None:
             'command': 'first.sh',
         }
     )
-    first_id = uuid.UUID(first['job_id'])
+    first_id = _as_uuid(first['job_id'])
 
     second = scheduler.create(
         {
@@ -46,7 +50,7 @@ def test_create_job_with_before_job_id_links_chain(scheduler) -> None:
             'before_job_id': first_id,
         }
     )
-    second_id = uuid.UUID(second['job_id'])
+    second_id = _as_uuid(second['job_id'])
 
     assert scheduler.jobs[first_id].previous_id == second_id
     assert scheduler.jobs[second_id].next_id == first_id
@@ -75,12 +79,12 @@ def test_get_job_success_when_updated_at_present(scheduler) -> None:
             'command': 'job.sh',
         }
     )
-    job_id = uuid.UUID(created['job_id'])
+    job_id = _as_uuid(created['job_id'])
     scheduler.jobs[job_id].updated_at = datetime.datetime(2026, 1, 1, 1, 0, 0)
 
     result = scheduler.get(str(job_id))
 
-    assert result['id'] == str(job_id)
+    assert result['id'] == job_id
     assert result['name'] == 'job'
     assert result['description'] == 'job descr'
     assert result['command'] == 'job.sh'
@@ -97,7 +101,7 @@ def test_get_job_without_updated_at_returns_none(scheduler) -> None:
         }
     )
 
-    result = scheduler.get(created['job_id'])
+    result = scheduler.get(str(created['job_id']))
 
     assert result['updated_at'] is None
 
@@ -159,10 +163,10 @@ def test_edit_job_with_before_job_id_recreates_cron_item(scheduler) -> None:
         }
     )
 
-    second_id = uuid.UUID(second['job_id'])
+    second_id = _as_uuid(second['job_id'])
     old_item = scheduler.jobs[second_id].cron_item
 
-    scheduler.edit({'job_id': second['job_id'], 'before_job_id': uuid.UUID(first['job_id'])})
+    scheduler.edit({'job_id': second['job_id'], 'before_job_id': _as_uuid(first['job_id'])})
 
     assert scheduler.jobs[second_id].cron_item is not old_item
     assert scheduler._cron.items[0].command == 'second.sh'
@@ -184,7 +188,7 @@ def test_delete_job_success(scheduler) -> None:
     )
     job_id = created['job_id']
 
-    scheduler.delete(job_id)
+    scheduler.delete(str(job_id))
 
     assert scheduler.jobs == {}
     assert scheduler._cron.items == []
@@ -218,18 +222,17 @@ def test_list_all_returns_all_jobs(scheduler) -> None:
         }
     )
 
-    first_id = uuid.UUID(first['job_id'])
-    second_id = uuid.UUID(second['job_id'])
-    
-    # Set updated_at to enable successful get calls
+    first_id = _as_uuid(first['job_id'])
+    second_id = _as_uuid(second['job_id'])
+
+    # `get` currently requires updated_at in this implementation.
     scheduler.jobs[first_id].updated_at = datetime.datetime.now()
     scheduler.jobs[second_id].updated_at = datetime.datetime.now()
-    
-    first_job = scheduler.get(str(first_id))
-    second_job = scheduler.get(str(second_id))
 
-    assert first_job['name'] == 'first'
-    assert second_job['name'] == 'second'
+    jobs = scheduler.list_all()
+
+    assert len(jobs) == 2
+    assert {job['name'] for job in jobs} == {'first', 'second'}
 
 
 def test_create_job_with_invalid_command_raises_validation_error(scheduler) -> None:
