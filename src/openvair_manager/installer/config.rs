@@ -1,5 +1,7 @@
 use std::process::Command;
 
+use log::info;
+
 use crate::{cmd_runner::CommandRunner, openvair_manager::cli::OpenvairManagerInstallArgs};
 
 #[derive(Default, Clone, Debug)]
@@ -14,6 +16,7 @@ pub struct InstallerConfig {
     pub docs_project_path: String,
     pub project_config_file: String,
     pub dependencies_file: String,
+    pub processor_type: String,
 }
 
 impl InstallerConfig {
@@ -60,6 +63,14 @@ impl<'a> InstallerConfigBuilder {
             format!("{}/project_config.toml", self.config.project_path);
         self.config.dependencies_file =
             format!("{}/third_party_requirements.txt", self.config.project_path);
+
+        if self.config.arch == "aarch64" {
+            self.config.processor_type = "arm64".to_string();
+        } else {
+            self.config.processor_type = "amd64".to_string();
+        }
+
+        info!("architecture set to {}", self.config.arch);
         self.config
     }
 }

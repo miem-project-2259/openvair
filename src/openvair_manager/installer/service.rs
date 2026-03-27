@@ -1,11 +1,14 @@
-use std::process::Command;
+use std::{process::Command, thread, time::Duration};
 
 use log::info;
 use serde_valid::Validate;
 
 use crate::{
     cmd_runner::CommandRunner,
-    docker::{installer::DockerInstaller, provider::DockerProvider},
+    docker::{
+        installer::DockerInstaller,
+        provider::{DockerProvider, DockerRunConfig},
+    },
     openvair_manager::{installer::config::InstallerConfig, python::PythonProvider},
     pkg_management::PackageProvider,
     project_config::OpenvairProjectConfig,
@@ -28,6 +31,7 @@ impl<'a> OpenvairInstallerService<'a> {
         runner: &'a CommandRunner,
         docker_installer: &'a dyn DockerInstaller,
         docker: &'a DockerProvider<'a>,
+        python: &'a PythonProvider<'a>,
     ) -> Self {
         let config_path = installer_config.project_config_file.clone();
         Self {
@@ -38,6 +42,7 @@ impl<'a> OpenvairInstallerService<'a> {
             runner,
             docker_installer,
             docker,
+            python,
         }
     }
 
@@ -51,6 +56,11 @@ impl<'a> OpenvairInstallerService<'a> {
         self.prepare_system_packages()?;
         self.make_and_configure_venv()?;
         self.prepare_python_packages()?;
+
+        self.set_repo_owner()?;
+        self.docker_installer.install_docker()?;
+        self.setup_postgres_container()?;
+        self.setup_rabbitmq_container()?;
 
         todo!()
     }
@@ -106,6 +116,9 @@ impl<'a> OpenvairInstallerService<'a> {
             // ---
             "openvswitch-switch",
             "multipath-tools",
+            // snmp
+            "snmp",
+            "snmpd",
         ];
 
         for p in pkgs {
@@ -162,6 +175,95 @@ impl<'a> OpenvairInstallerService<'a> {
             ))
             .arg("install"),
         )?;
+        Ok(())
+    }
+
+    fn set_repo_owner(&self) -> anyhow::Result<()> {
+        info!("changing owner of the repo");
+        self.runner.try_run(Command::new("sudo").args([
+            "chown",
+            "-R",
+            &format!(
+                "{}:{}",
+                self.installer_config.user, self.installer_config.user
+            ),
+            &self.installer_config.project_path,
+        ]))?;
+        Ok(())
+    }
+
+    fn setup_postgres_container(&self) -> anyhow::Result<()> {
+        info!("creating postgresql docker container");
+        const PG_CONTAINER_NAME: &str = "postgres";
+        const PG_DB_NAME: &str = "openvair";
+
+        let pg_run = DockerRunConfig::new("postgres -c 'listen_addresses=*'")
+            .builder()
+            .name(PG_CONTAINER_NAME)
+            .restart("unless-stopped")
+            .env(&[
+                format!("POSTGRES_USER={}", self.installer_config.user).as_str(),
+                format!("POSTGRES_PASSWORD={}", self.installer_config.user).as_str(),
+            ])
+            .ports(&format!(
+                "{}:{}",
+                self.project_config.database.port, self.project_config.database.port
+            ))
+            .detach(true)
+            .build();
+
+        self.docker.try_run(&pg_run)?;
+        thread::sleep(Duration::from_secs(5));
+
+        // Create DB
+        self.docker.try_exec(
+            PG_CONTAINER_NAME,
+            &format!(
+                "psql -U {} -c 'CREATE DATABASE {};'",
+                self.installer_config.user, PG_DB_NAME
+            ),
+        )?;
+
+        // Setup Permissions
+        self.docker.try_exec(
+            PG_CONTAINER_NAME,
+            &format!(
+                "psql -U {} -c 'GRANT ALL PRIVILEGES ON DATABASE {} TO {};'",
+                self.installer_config.user, PG_DB_NAME, self.installer_config.user,
+            ),
+        )?;
+
+        Ok(())
+    }
+
+    fn setup_rabbitmq_container(&self) -> anyhow::Result<()> {
+        let rabbitmq_user = self.project_config.rabbitmq.user.as_str();
+        let rabbitmq_password = self.project_config.rabbitmq.password.as_str();
+        let rabbitmq_host = match self.project_config.rabbitmq.host.as_str() {
+            "localhost" => "127.0.0.1",
+            addr => addr,
+        };
+        let rabbitmq_port = self.project_config.rabbitmq.port;
+
+        // TODO this should prooooobably be moved to be a configurable version
+        //
+        // But for now "it just needs to be"
+        let hostname = self.runner.try_run(&mut Command::new("hostname"))?.output;
+        let run_cfg = DockerRunConfig::new("rabbitmq:3.11")
+            .builder()
+            .detach(true)
+            .hostname(&hostname)
+            .name("rabbit")
+            .env(&[
+                &format!("RABBITMQ_DEFAULT_USER={rabbitmq_user}"),
+                &format!("RABBITMQ_DEFAULT_PASS={rabbitmq_password}"),
+            ])
+            .ports(&format!("{rabbitmq_host}:{rabbitmq_port}:{rabbitmq_port}"))
+            .restart("unless-stopped")
+            .build();
+
+        self.docker.try_run(&run_cfg)?;
+
         Ok(())
     }
 

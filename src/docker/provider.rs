@@ -24,14 +24,14 @@ pub struct DockerRunConfig {
 }
 
 impl DockerRunConfig {
-    fn new(command: &str) -> Self {
+    pub fn new(command: &str) -> Self {
         Self {
             command: command.to_string(),
             ..Default::default()
         }
     }
 
-    fn builder(self) -> DockerRunConfigBuilder {
+    pub fn builder(self) -> DockerRunConfigBuilder {
         DockerRunConfigBuilder { config: self }
     }
 }
@@ -42,24 +42,24 @@ pub struct DockerRunConfigBuilder {
 }
 
 impl DockerRunConfigBuilder {
-    fn name(mut self, value: &str) -> Self {
+    pub fn name(mut self, value: &str) -> Self {
         self.config.name = Some(value.to_string());
         self
     }
-    fn restart(mut self, value: &str) -> Self {
+    pub fn restart(mut self, value: &str) -> Self {
         self.config.name = Some(value.to_string());
         self
     }
-    fn ports(mut self, value: &str) -> Self {
+    pub fn ports(mut self, value: &str) -> Self {
         self.config.name = Some(value.to_string());
         self
     }
-    fn hostname(mut self, value: &str) -> Self {
+    pub fn hostname(mut self, value: &str) -> Self {
         self.config.name = Some(value.to_string());
         self
     }
 
-    fn env(mut self, value: &[&str]) -> Self {
+    pub fn env(mut self, value: &[&str]) -> Self {
         self.config.name = Some(
             Vec::from_iter(value)
                 .iter()
@@ -69,13 +69,18 @@ impl DockerRunConfigBuilder {
         self
     }
 
-    fn build(self) -> DockerRunConfig {
+    pub fn detach(mut self, value: bool) -> Self {
+        self.config.detach = value;
+        self
+    }
+
+    pub fn build(self) -> DockerRunConfig {
         self.config
     }
 }
 
 impl<'a> DockerProvider<'a> {
-    fn try_run(&self, run_config: &DockerRunConfig) -> anyhow::Result<CommandResult> {
+    pub fn try_run(&self, run_config: &DockerRunConfig) -> anyhow::Result<CommandResult> {
         let mut cmd_base = Command::new("sudo");
         let mut args: Vec<&str> = vec!["docker", "run"];
 
@@ -112,7 +117,7 @@ impl<'a> DockerProvider<'a> {
         Ok(self.runner.try_run(cmd_base.args(args))?)
     }
 
-    fn try_exec(&self, container_name: &str, command: &str) -> anyhow::Result<CommandResult> {
+    pub fn try_exec(&self, container_name: &str, command: &str) -> anyhow::Result<CommandResult> {
         let mut cmd = Command::new("sudo");
         Ok(self
             .runner
