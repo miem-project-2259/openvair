@@ -13,6 +13,10 @@ from openvair.modules.scheduler.domain.model import (
 
 
 class _DummyScheduler(BaseScheduler):
+    def __init__(self, *, crontab: _FactoryFakeCronTab) -> None:
+        super().__init__()
+        self._cron = crontab
+
     def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:
         return creation_data
 
@@ -69,9 +73,18 @@ def test_scheduler_factory_unknown_type_raises_value_error() -> None:
         factory.get_scheduler({'type': 'unknown', 'user': 'root'})
 
 
-def test_scheduler_factory_default_mapping_uses_abstract_scheduler() -> None:
-    factory = SchedulerFactory()
+def test_scheduler_factory_default_mapping_returns_cron_scheduler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        'openvair.modules.scheduler.domain.model.CronTab',
+        _FactoryFakeCronTab,
+    )
 
-    with pytest.raises(TypeError):
-        factory.get_scheduler({'type': 'system_cron', 'user': 'root'})
+    factory = SchedulerFactory()
+    scheduler = factory.get_scheduler({'type': 'system_cron', 'user': 'root'})
+
+    assert scheduler.__class__.__name__ == 'CronJobScheduler'
+    assert isinstance(scheduler._cron, _FactoryFakeCronTab)
+    assert scheduler._cron.user == 'root'
 

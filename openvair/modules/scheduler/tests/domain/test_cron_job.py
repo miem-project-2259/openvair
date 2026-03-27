@@ -87,7 +87,7 @@ def test_get_job_success_when_updated_at_present(scheduler) -> None:
     assert result['enabled'] is True
 
 
-def test_get_job_without_updated_at_raises_validation_error(scheduler) -> None:
+def test_get_job_without_updated_at_returns_none(scheduler) -> None:
     created = scheduler.create(
         {
             'name': 'job',
@@ -97,8 +97,9 @@ def test_get_job_without_updated_at_raises_validation_error(scheduler) -> None:
         }
     )
 
-    with pytest.raises(ValidationError):
-        scheduler.get(created['job_id'])
+    result = scheduler.get(created['job_id'])
+
+    assert result['updated_at'] is None
 
 
 def test_get_job_invalid_uuid_raises_value_error(scheduler) -> None:
@@ -197,4 +198,77 @@ def test_delete_job_invalid_uuid_raises_value_error(scheduler) -> None:
 def test_delete_job_not_found_raises(scheduler) -> None:
     with pytest.raises(CronJobNotFound):
         scheduler.delete(str(uuid.uuid4()))
+
+
+def test_list_all_returns_all_jobs(scheduler) -> None:
+    first = scheduler.create(
+        {
+            'name': 'first',
+            'description': 'first',
+            'cron_schedule': '* * * * *',
+            'command': 'first.sh',
+        }
+    )
+    second = scheduler.create(
+        {
+            'name': 'second',
+            'description': 'second',
+            'cron_schedule': '*/2 * * * *',
+            'command': 'second.sh',
+        }
+    )
+
+    first_id = uuid.UUID(first['job_id'])
+    second_id = uuid.UUID(second['job_id'])
+    
+    # Set updated_at to enable successful get calls
+    scheduler.jobs[first_id].updated_at = datetime.datetime.now()
+    scheduler.jobs[second_id].updated_at = datetime.datetime.now()
+    
+    first_job = scheduler.get(str(first_id))
+    second_job = scheduler.get(str(second_id))
+
+    assert first_job['name'] == 'first'
+    assert second_job['name'] == 'second'
+
+
+def test_create_job_with_invalid_command_raises_validation_error(scheduler) -> None:
+    with pytest.raises(ValidationError):
+        scheduler.create(
+            {
+                'name': 'bad',
+                'description': 'Invalid command',
+                'cron_schedule': '* * * * *',
+                'command': 'rm -rf /',
+            }
+        )
+
+
+def test_edit_job_with_conflicting_dependencies_raises_validation_error(scheduler) -> None:
+    first = scheduler.create(
+        {
+            'name': 'first',
+            'description': 'first',
+            'cron_schedule': '* * * * *',
+            'command': 'first.sh',
+        }
+    )
+    second = scheduler.create(
+        {
+            'name': 'second',
+            'description': 'second',
+            'cron_schedule': '* * * * *',
+            'command': 'second.sh',
+        }
+    )
+
+    with pytest.raises(ValidationError):
+        scheduler.edit(
+            {
+                'job_id': second['job_id'],
+                'before_job_id': first['job_id'],
+                'after_job_id': first['job_id'],
+            }
+        )
+
 

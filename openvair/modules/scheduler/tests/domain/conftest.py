@@ -59,13 +59,18 @@ class _FakeCronTab:
         *,
         command: str,
         comment: str,
-        before: _FakeCronItem | None = None,
+        before: _FakeCronItem | list[_FakeCronItem] | None = None,
     ) -> _FakeCronItem:
         job = _FakeCronItem(command=command, comment=comment, schedule='* * * * *')
-        if before is None:
+        if isinstance(before, list):
+            before_item = before[0] if before else None
+        else:
+            before_item = before
+
+        if before_item is None:
             self.items.append(job)
         else:
-            index = self.items.index(before)
+            index = self.items.index(before_item)
             self.items.insert(index, job)
         return job
 
