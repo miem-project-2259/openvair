@@ -13,15 +13,30 @@ impl<'a> PythonProvider<'a> {
         Self { runner, venv_path }
     }
 
+    fn install_cmd(&self) -> Command {
+        Command::new(format!("{}/bin/python3", self.venv_path))
+    }
+
+    fn install_args() -> Vec<String> {
+        vec![
+            String::from("-m"),
+            String::from("pip"),
+            String::from("install"),
+        ]
+    }
+
     pub fn install(&self, package_name: &str) -> anyhow::Result<()> {
-        self.runner.try_run(
-            Command::new(format!("{}/bin/python3", self.venv_path)).args([
-                "-m",
-                "pip",
-                "install",
-                package_name,
-            ]),
-        )?;
+        let mut args = Self::install_args();
+        args.push(package_name.to_string());
+        self.runner.try_run(self.install_cmd().args(args))?;
+
+        Ok(())
+    }
+
+    pub fn install_requirements(&self, requirements_path: &str) -> anyhow::Result<()> {
+        let mut args = Self::install_args();
+        args.extend([String::from("-r"), requirements_path.to_string()]);
+        self.runner.try_run(self.install_cmd().args(args))?;
 
         Ok(())
     }
