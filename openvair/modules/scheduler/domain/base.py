@@ -11,7 +11,7 @@ and shared fields for managing scheduled tasks.
 import abc
 import datetime
 from uuid import UUID
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, Union, Optional
 
 from crontab import CronItem
 from pydantic import Field, BaseModel, ConfigDict
@@ -41,9 +41,6 @@ class JobMetadata(BaseModel):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    # ^^^ Added because of
-    # pydantic.errors.PydanticSchemaGenerationError:
-    # Unable to generate pydantic-core schema for <class 'crontab.CronItem'>
     cron_item: CronItem
     name: str
     created_at: datetime.datetime
@@ -65,7 +62,7 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         self.jobs: Dict[UUID, JobMetadata] = {}
 
     @abc.abstractmethod
-    def create(self, creation_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:
         """Create a scheduled task.
 
         Args:
@@ -79,11 +76,11 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def get(self, job_id: str) -> Dict[str, Any]:
+    def get(self, data: dict[str, Any]) -> dict[str, Any]:
         """Retrieve a single scheduled task by its unique identifier.
 
         Args:
-            job_id (str): The unique identifier (e.g., comment) of the task.
+            data (Dict[str, Any]): Dictionary containing 'job_id'.
 
         Returns:
             Dict[str, Any]: A dictionary representation of the found task.
@@ -94,8 +91,11 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def list_all(self) -> List[Dict[str, Any]]:
+    def list_all(self, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Retrieve all scheduled tasks managed by this scheduler.
+
+        Args:
+            data (Dict[str, Any]): Dictionary with request data (can be empty).
 
         Returns:
             List[Dict[str, Any]]: A list of dictionaries, where each dictionary
@@ -119,11 +119,11 @@ class BaseScheduler(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def delete(self, job_id: str) -> None:
+    def delete(self, data: dict[str, Any]) -> None:
         """Delete a scheduled task by its unique identifier.
 
         Args:
-            job_id (str): The unique identifier of the task to delete.
+            data (Dict[str, Any]): Dictionary containing 'job_id'.
 
         Raises:
             CronJobNotFound: If a task with the given ID is not found.

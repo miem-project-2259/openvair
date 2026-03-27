@@ -49,6 +49,7 @@ class UpdateJobServiceCommandDTO(BaseDTOModel):
     """DTO for updating job fields at the service layer.
 
     Attributes:
+        id (UUID) : UUID of the job.
         name (Optional[str]): Updated name for the job.
         description (Optional[str]): Updated description.
         cron_schedule (Optional[str]): Updated CRON schedule.
@@ -57,7 +58,7 @@ class UpdateJobServiceCommandDTO(BaseDTOModel):
         before_job_id (Optional[UUID]): Updated dependency before another job.
         after_job_id (Optional[UUID]): Updated dependency after another job.
     """
-
+    id: UUID
     name: Optional[str] = None
     description: Optional[str] = None
     cron_schedule: Optional[str] = None

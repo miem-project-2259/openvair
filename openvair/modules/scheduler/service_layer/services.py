@@ -1,11 +1,13 @@
 """Scheduler service basic operations (get, create, edit, delete)."""
-
+import datetime
 from uuid import UUID
 from typing import Any, Set, Dict, List
+from contextlib import suppress
 
 from crontab import CronSlices  # TODO: uberi nenujnie validacii
 
 from openvair.libs.log import get_logger
+from openvair.modules.base_manager import BackgroundTasks, periodic_task
 from openvair.modules.scheduler.config import (
     API_SERVICE_LAYER_QUEUE_NAME,
     SERVICE_LAYER_DOMAIN_QUEUE_NAME,
@@ -26,10 +28,12 @@ from openvair.modules.scheduler.service_layer.unit_of_work import (
     SchedulerSqlAlchemyUnitOfWork,
 )
 
+JOB_LIFETIME_THRESHOLD_SECS = 30
+
 LOG = get_logger(__name__)
 
 
-class SchedulerServiceLayerManager:
+class SchedulerServiceLayerManager(BackgroundTasks):
     """Manager for coordinating scheduler operations in the service layer.
 
     This class orchestrates scheduler-related tasks such as creation,
@@ -50,6 +54,7 @@ class SchedulerServiceLayerManager:
 
         Sets up messaging clients, unit of work, and RPC clients.
         """
+        super().__init__()
         self.uow = SchedulerSqlAlchemyUnitOfWork
         self.domain_rpc = MessagingClient(
             queue_name=SERVICE_LAYER_DOMAIN_QUEUE_NAME
@@ -97,13 +102,17 @@ class SchedulerServiceLayerManager:
             uow.commit()
             uow.session.refresh(new_job)
 
-            # LOG.info('Casting to domain layer to create a job')
-            # domain_payload = SchedulerJobSerializer.to_domain(new_job)
+            LOG.info('Casting to domain layer to create a job')
+            domain_payload = SchedulerJobSerializer.to_domain(new_job)
 
-            # self.domain_rpc.call(
-            #     method_name='create',
-            #     data_for_method=domain_payload,
-            # )
+            self.domain_rpc.call(
+                method_name='create',
+                 data_for_manager={
+                    'type': 'system_cron',
+                    'user': 'root'
+                    },
+                data_for_method=domain_payload
+            )
 
             return SchedulerJobSerializer.to_web(new_job)
 
@@ -122,20 +131,17 @@ class SchedulerServiceLayerManager:
             uow.commit()
             uow.session.refresh(job)
 
-            domain_payload = SchedulerJobSerializer.to_domain(job)
-            domain_payload['job_id'] = str(job_id)
-
             LOG.info('Casting to domain layer to edit a job')
             domain_payload = SchedulerJobSerializer.to_domain(job)
-            domain_payload['job_id'] = str(job_id)
 
-            # self.domain_rpc.call(
-            #     method_name='edit',
-            #     scheduler_data=domain_payload,
-            #     data_for_method={
-            #         'editing_data': domain_payload
-            #     },
-            # )
+            self.domain_rpc.call(
+                method_name='edit',
+                 data_for_manager={
+                    'type': 'system_cron',
+                    'user': 'root'
+                    },
+                data_for_method=domain_payload
+            )
 
             return SchedulerJobSerializer.to_web(job)
 
@@ -202,13 +208,14 @@ class SchedulerServiceLayerManager:
             uow.jobs.delete(job)
             uow.commit()
 
-            # self.domain_rpc.call(
-            #     method_name='delete',
-            #     data_for_method=
-            #     {
-            #         'job_id': str(job_id)
-            #     },
-            # )
+            self.domain_rpc.call(
+                method_name='delete',
+                data_for_manager={
+                    'type': 'system_cron',
+                    'user': 'root'
+                    },
+                data_for_method={'job_id': str(job_id)}
+            )
 
             return SchedulerJobSerializer.to_web(job)
 
@@ -221,98 +228,106 @@ class SchedulerServiceLayerManager:
 
             return SchedulerJobSerializer.to_web(job)
 
-    # @periodic_task(interval=10) #  РЕАЛИЗУЙ МЕТОД ДЛЯ МОНИТОРИНГА
-    # def monitoring(self) -> None:
-    # TODO: refactor to multiple methods
-    #     """Monitor and synchronize network interfaces with the system.
 
-    #     This periodic task refreshes the state of all network interfaces
-    #     in the database with data retrieved from the operating system.
-    #     It ensures that the database remains consistent with
-    #     the actual state of the system's network interfaces.
-    #     """
-    #     LOG.info('Start monitoring')
-    #     interfaces_from_os = {
-    #         inf['name']: inf for inf in utils.InterfacesFromSystem().get_all()
-    #     }
+    @periodic_task(interval=10)
+    def monitoring(self) -> None: #noqa: C901
+        """Monitor and synchronize scheduled jobs with the system crontab.
 
-    #     LOG.debug('Got interfaces from system %s' % interfaces_from_os)
-    #     with self.uow() as uow:
-    #         db_interfaces = [
-    #             iface.name for iface in uow.interfaces.get_all()
-    #         ]
-    #         LOG.debug('Got interfaces from db %s' % db_interfaces)
+        This periodic task fetches all OpenVair jobs from the OS crontab and
+        synchronizes their runtimes (last_run, next_run) and enabled state
+        with the database. It also handles orphaned or missing jobs.
+        """
+        LOG.info('Start monitoring scheduler jobs')
 
-    #     for (os_iface_name), os_iface_data in interfaces_from_os.items():
-    #         with self.uow() as uow:
-    #             db_iface_now = uow.interfaces.get_by_name(os_iface_name)
-    #             db_interface = self.__synchronize_os_to_db_info(
-    #                 os_iface_data,
-    #                 db_iface_now,
-    #             )
-    #             db_interface.status = InterfaceStatus.available.name
-    #             uow.interfaces.add(db_interface)
-    #             if os_iface_name in db_interfaces:
-    #                 db_interfaces.remove(os_iface_name)
-    #             uow.commit()
+        # 1. Gather jobs from OS crontab
+        try:
+            domain_response: Dict[str, Any] = self.domain_rpc.call(
+                method_name='list_all',
+                data_for_manager={'type': 'system_cron', 'user': 'root'},
+                data_for_method={}
+            )
+            os_jobs = domain_response.get('jobs', [])
+            os_jobs_map = {str(job['id']): job for job in os_jobs}
+        except Exception as error: # noqa: BLE001
+            LOG.error(f"Monitoring failed to fetch jobs from OS: {error}")
+            return
+        with self.uow() as uow:
+            db_jobs = uow.jobs.get_all()
 
-    #     prefixes_to_delete = ['vnet', 'veth']
-    #     for db_iface_name in db_interfaces:
-    #         with self.uow() as uow:
-    #             db_iface = uow.interfaces.get_by_name(db_iface_name)
-    #             if not db_iface:
-    #                 continue
-    #             if db_iface_name.startswith('ovs-system') or any(
-    #                 db_iface_name.startswith(prefix) for prefix
-    #                 in prefixes_to_delete
-    #             ):
-    #                 uow.interfaces.delete(db_iface)
-    #             else:
-    #                 LOG.info(
-    #                     f'Interface {db_iface_name!r} not found in os. '
-    #                     f'Setting status to error for '
-    #                     f'interface {db_iface!r}.'
-    #                 )
-    #                 db_iface.status = InterfaceStatus.error.name
-    #             uow.commit()
+            # 2. Get all jobs in service layer's db
+            for db_job in db_jobs:
+                job_id_str = str(db_job.id)
+                os_job_data = os_jobs_map.get(job_id_str)
 
-    #     LOG.info('Stop monitoring')
+                if os_job_data:
+                    # If job is presented both in db and in OS crontab
+                    #   Synchronise execution dates and status (enabled or not)
+                    self.__synchronize_os_to_db_info(db_job, os_job_data)
+                    # Remove correct job from stack,
+                    # so it only contains jobs with errors
+                    os_jobs_map.pop(job_id_str)
+                else:
+                    # Job is presented in DB but not in OS crontab
+                    # Race condition guard: check that job was not JUST created
+                    current_time = datetime.datetime.now()
+                    job_created_at = db_job.created_at
+                    job_age = (current_time - job_created_at).total_seconds()
+                    if (
+                        db_job.enabled
+                        and job_age > JOB_LIFETIME_THRESHOLD_SECS
+                    ):
+                        LOG.warning(
+                            f"Job {job_id_str} not found in OS crontab. "
+                            f"Disabling in database."
+                        )
+                        db_job.enabled = False
 
-    # def __synchronize_os_to_db_info(
-    #     self,
-    #     os_iface: Dict,
-    #     db_iface: Optional[orm.Interface],
-    # ) -> orm.Interface:
-    #     """Synchronize the OS interface data with the database.
+            # 3. Delete jobs in OS that are not presented in service layer's DB
+            for orphan_id in os_jobs_map:
+                msg = f"Found orphaned job {orphan_id} in OS. Deleting."
+                LOG.warning(msg)
+                try:
+                    self.domain_rpc.call(
+                        method_name='delete',
+                        data_for_manager={
+                            'type': 'system_cron',
+                            'user': 'root'
+                        },
+                        data_for_method={
+                            'job_id': orphan_id
+                        }
+                    )
+                except Exception as error: # noqa: BLE001
+                    msg = f"Failed to delete orphaned job {orphan_id}: {error}"
+                    LOG.error(msg)
 
-    #     This method compares the interface data from the operating system with
-    #     the data in the database and updates the database accordingly. If the
-    #     interface does not exist in the database, it is created.
+            uow.commit()
 
-    #     Args:
-    #         os_iface (Dict): A dictionary containing the interface data from
-    #             the operating system.
-    #         db_iface (orm.Interface): The corresponding database interface
-    #             object, if it exists.
+        LOG.info('Stop monitoring scheduler jobs')
 
-    #     Returns:
-    #         orm.Interface: The updated or created database interface object.
-    #     """
-    #     os_iface_name = os_iface.get('name')
-    #     if db_iface is None:
-    #         LOG.warning(
-    #             f'Interface {os_iface_name} not found in db. Trying to '
-    #             'synchronize...'
-    #         )
-    #         db_iface = cast(orm.Interface, DataSerializer.to_db(os_iface))
-    #         LOG.info(f'Interface {os_iface_name}'
-    #                   'successfully prepared for db')
-    #     else:
-    #         self._update_extra_specs(db_iface,
-    #                                  os_iface.get('extra_specs', {}))
+    def __synchronize_os_to_db_info(
+        self, db_job: SchedulerJob, os_job_data: Dict[str, Any]
+    ) -> None:
+        """Update DB job attributes based on OS job data (runs and status)."""
+        # Synchronize scheduler_jobs.last_run
+        last_run_str = os_job_data.get('last_run')
+        if last_run_str:
+            with suppress(ValueError):
+                datetime_iso = datetime.datetime.fromisoformat(last_run_str)
+                db_job.last_run = datetime_iso.replace(tzinfo=None)
 
-    #     for attribute in CreateInterfaceInfo._fields:
-    #         attribute_value = os_iface.get(attribute)
-    #         setattr(db_iface, attribute, attribute_value)
+        # Synchronize scheduler_jobs.next_run
+        next_run_str = os_job_data.get('next_run')
+        if next_run_str:
+            with suppress(ValueError):
+                datetime_iso = datetime.datetime.fromisoformat(next_run_str)
+                db_job.next_run = datetime_iso.replace(tzinfo=None)
 
-    #     return db_iface
+        # Synchronize scheduler_jobs.enabled
+        os_enabled = os_job_data.get('enabled')
+        if os_enabled is not None and db_job.enabled != os_enabled:
+            LOG.info(
+                f"Syncing enabled state for job {db_job.id}: "
+                f"DB({db_job.enabled}) -> OS({os_enabled})"
+            )
+            db_job.enabled = os_enabled

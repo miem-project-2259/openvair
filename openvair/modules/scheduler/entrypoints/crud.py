@@ -133,7 +133,9 @@ class SchedulerCrud:
         """
         LOG.info(f'Call service layer on editing job {job_id}.')
 
+
         editing_command = UpdateJobServiceCommandDTO(
+            id = job_id,
             **edit_data.model_dump(exclude_none=True)
         )
         result: Dict[str, Any] = self.service_layer_rpc.call(

@@ -97,12 +97,8 @@ class RequestCreateJob(APIConfigRequestModel):
             msg = "Command contains forbidden or unsafe operations"
             raise ValueError(msg)
 
-        if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
+        if not re.match(r"^[a-zA-Z0-9_\-./ >&|;]+$", value):
             msg = "Command contains invalid characters"
-            raise ValueError(msg)
-
-        if not re.search(r'\.sh$', value):
-            msg = "Command must reference a valid script file (e.g., backup.sh)"
             raise ValueError(msg)
 
         return value.strip()
@@ -152,10 +148,6 @@ class RequestUpdateJob(APIConfigRequestModel):
         after_job_id (Optional[UUID]): Updated dependency after another job.
     """
 
-    job_id: UUID = Field(
-        examples=["a9b51a12-bd31-4fa3-9523-f7e4b8e3d321"],
-        description="ID of the job to be updated"
-    )
     name: Optional[str] = Field(
         None,
         examples=['backup_db_updated'],
@@ -214,7 +206,7 @@ class RequestUpdateJob(APIConfigRequestModel):
         if is_command_forbidden(value):
             msg = "Command contains forbidden or unsafe operations"
             raise ValueError(msg)
-        if not re.match(r"^[a-zA-Z0-9_\-./ ]+$", value):
+        if not re.match(r"^[a-zA-Z0-9_\-./ >&|;]+$", value):
             msg = "Command contains invalid characters"
             raise ValueError(msg)
 

@@ -3,7 +3,7 @@
 Provides conversion logic between ORM models and DTOs used at API and domain
 layers.
 
-Classes: WIP NEED TO CONVERT TO DTO!!!
+Classes: TODO: NEED TO CONVERT TO DTO!!!
     - ApiSerializer: ORM <-> API DTO
     - DomainSerializer: ORM <-> Domain DTO
     - CreateSerializer: Create DTO -> ORM
