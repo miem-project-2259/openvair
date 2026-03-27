@@ -64,6 +64,8 @@ impl<'a> OpenvairInstallerService<'a> {
 
         self.setup_snmp()?;
         self.make_migrations()?;
+        self.generate_certificate()?;
+        self.setup_novnc()?;
 
         todo!()
     }
@@ -119,6 +121,7 @@ impl<'a> OpenvairInstallerService<'a> {
             // ---
             "openvswitch-switch",
             "multipath-tools",
+            "open-iscsi",
         ];
 
         for p in pkgs {
@@ -308,6 +311,49 @@ impl<'a> OpenvairInstallerService<'a> {
                 ])
                 .current_dir(&self.installer_config.project_path),
         )?;
+
+        Ok(())
+    }
+
+    fn generate_certificate(&self) -> anyhow::Result<()> {
+        const CERT_DURATION_DAYS: u32 = 36500;
+        let KEY_FILE: &str = &format!("{}/key.pem", self.installer_config.project_path);
+        let CERT_FILE: &str = &format!("{}/cert.pem", self.installer_config.project_path);
+        let CONFIG_FILE: &str = &format!("{}/openssl.cnf", self.installer_config.project_path);
+
+        if !std::fs::exists(CONFIG_FILE)? {
+            anyhow::bail!("configuration file {} not found", CONFIG_FILE);
+        }
+
+        info!("configuration file {} found", CONFIG_FILE);
+
+        self.runner.try_run(Command::new("openssl").args([
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:4096",
+            "-keyout",
+            KEY_FILE,
+            "-out",
+            CERT_FILE,
+            "-days",
+            &CERT_DURATION_DAYS.to_string(),
+            "-nodes",
+            "-config",
+            CONFIG_FILE,
+        ]))?;
+        Ok(())
+    }
+
+    fn setup_novnc(&self) -> anyhow::Result<()> {
+        self.runner.try_run(Command::new("git").args([
+            "clone",
+            "https://github.com/novnc/noVNC.git",
+            &format!(
+                "{}/{}/libs/noVNC",
+                self.installer_config.project_path, self.installer_config.project_name
+            ),
+        ]))?;
 
         Ok(())
     }
