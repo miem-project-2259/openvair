@@ -16,6 +16,25 @@ pub struct UbuntuDockerInstaller<'a> {
     proc: String,
 }
 
+impl<'a> UbuntuDockerInstaller<'a> {
+    pub fn new(runner: &'a CommandRunner, pkg: &'a UbuntuPackageProvider<'a>) -> Self {
+        Self {
+            runner,
+            pkg,
+            os_type: String::new(),
+            proc: String::new(),
+        }
+    }
+
+    pub fn set_os_type(&mut self, value: &str) {
+        self.os_type = value.to_string();
+    }
+
+    pub fn set_proc(&mut self, value: &str) {
+        self.proc = value.to_string();
+    }
+}
+
 impl<'a> DockerInstaller for UbuntuDockerInstaller<'a> {
     fn install_docker(&self) -> anyhow::Result<()> {
         let pkgs = [

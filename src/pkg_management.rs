@@ -20,7 +20,7 @@ pub struct UbuntuPackageProvider<'a> {
 }
 
 impl<'a> UbuntuPackageProvider<'a> {
-    fn new(runner: &'a CommandRunner) -> Self {
+    pub fn new(runner: &'a CommandRunner) -> Self {
         UbuntuPackageProvider { runner }
     }
 }

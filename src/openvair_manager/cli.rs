@@ -3,7 +3,7 @@ use clap::{Args, Parser, Subcommand};
 #[derive(Clone, Debug, Parser)]
 pub struct OpenvairManagerCli {
     #[command(subcommand)]
-    command: ManagerCommands,
+    pub command: ManagerCommands,
 }
 
 #[derive(Clone, Debug, Args, PartialEq, Eq)]

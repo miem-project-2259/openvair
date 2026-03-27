@@ -5,6 +5,12 @@ use anyhow::anyhow;
 #[derive(Clone, Debug, Copy)]
 pub struct CommandRunner;
 
+impl CommandRunner {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct CommandResult {
     pub output: String,

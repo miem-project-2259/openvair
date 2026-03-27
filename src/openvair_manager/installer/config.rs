@@ -20,7 +20,7 @@ pub struct InstallerConfig {
 }
 
 impl InstallerConfig {
-    fn builder() -> InstallerConfigBuilder {
+    pub fn builder() -> InstallerConfigBuilder {
         InstallerConfigBuilder::new()
     }
 }
@@ -31,13 +31,13 @@ pub struct InstallerConfigBuilder {
 }
 
 impl<'a> InstallerConfigBuilder {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             config: Default::default(),
         }
     }
 
-    fn build(
+    pub fn build(
         mut self,
         runner: &'a CommandRunner,
         install_args: &'a OpenvairManagerInstallArgs,

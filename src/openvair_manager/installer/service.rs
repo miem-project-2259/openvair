@@ -15,8 +15,8 @@ use crate::{
 };
 
 pub struct OpenvairInstallerService<'a> {
-    installer_config: InstallerConfig,
-    project_config: OpenvairProjectConfig,
+    pub installer_config: InstallerConfig,
+    pub project_config: OpenvairProjectConfig,
     pkg: &'a dyn PackageProvider,
     runner: &'a CommandRunner,
     docker_installer: &'a dyn DockerInstaller,
@@ -27,17 +27,16 @@ pub struct OpenvairInstallerService<'a> {
 impl<'a> OpenvairInstallerService<'a> {
     pub fn new(
         installer_config: InstallerConfig,
+        project_config: OpenvairProjectConfig,
         pkg: &'a dyn PackageProvider,
         runner: &'a CommandRunner,
         docker_installer: &'a dyn DockerInstaller,
         docker: &'a DockerProvider<'a>,
         python: &'a PythonProvider<'a>,
     ) -> Self {
-        let config_path = installer_config.project_config_file.clone();
         Self {
             installer_config,
-            project_config: OpenvairProjectConfig::try_from_file(&config_path)
-                .expect("failed to read config file"),
+            project_config,
             pkg,
             runner,
             docker_installer,

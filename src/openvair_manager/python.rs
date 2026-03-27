@@ -9,8 +9,15 @@ pub struct PythonProvider<'a> {
 }
 
 impl<'a> PythonProvider<'a> {
-    pub fn new(runner: &'a CommandRunner, venv_path: String) -> Self {
-        Self { runner, venv_path }
+    pub fn new(runner: &'a CommandRunner) -> Self {
+        Self {
+            runner,
+            venv_path: String::new(),
+        }
+    }
+
+    pub fn set_venv_path(&mut self, path: &str) {
+        self.venv_path = path.to_string();
     }
 
     fn install_cmd(&self) -> Command {
