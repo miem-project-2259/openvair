@@ -65,9 +65,22 @@ impl<'a> OpenvairInstallerService<'a> {
         self.setup_snmp()?;
         self.make_migrations()?;
         self.generate_certificate()?;
-        self.setup_novnc()?;
 
-        todo!()
+        self.install_prometheus()?;
+        self.instrall_node_exporter()?;
+
+        self.setup_novnc()?;
+        self.setup_restic()?;
+        self.process_services()?;
+
+        self.clear_home_dir()?;
+        self.create_db_user()?;
+        self.install_uv()?;
+        self.install_documentation()?;
+        self.restart_web_app_service()?;
+        info!("installation finished");
+
+        Ok(())
     }
 
     fn create_jwt_secret(&mut self) -> anyhow::Result<()> {
@@ -345,6 +358,14 @@ impl<'a> OpenvairInstallerService<'a> {
         Ok(())
     }
 
+    fn install_prometheus(&self) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn instrall_node_exporter(&self) -> anyhow::Result<()> {
+        todo!()
+    }
+
     fn setup_novnc(&self) -> anyhow::Result<()> {
         self.runner.try_run(Command::new("git").args([
             "clone",
@@ -356,6 +377,42 @@ impl<'a> OpenvairInstallerService<'a> {
         ]))?;
 
         Ok(())
+    }
+
+    fn setup_restic(&self) -> anyhow::Result<()> {
+        self.pkg.install("restic");
+        self.runner
+            .try_run(Command::new("sudo").args(["restic", "self-update"]))?;
+
+        Ok(())
+    }
+
+    fn process_services(&self) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn clear_home_dir(&self) -> anyhow::Result<()> {
+        info!("clearing home directory");
+        self.runner.try_run(
+            Command::new("sudo").args(["rm", "-rf", ".nvm", ".npm", ".cache", ".config"]),
+        )?;
+        Ok(())
+    }
+
+    fn create_db_user(&self) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn install_uv(&self) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn install_documentation(&self) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn restart_web_app_service(&self) -> anyhow::Result<()> {
+        todo!()
     }
 
     fn save_project_config(&self) -> anyhow::Result<()> {
