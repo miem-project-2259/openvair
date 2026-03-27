@@ -1,13 +1,6 @@
 use std::process::Command;
 
-use log::info;
-
-use crate::{
-    cmd_runner::CommandRunner,
-    docker::{installer::DockerInstaller, provider::DockerProvider},
-    openvair_manager::cli::{OpenvairManagerCli, OpenvairManagerInstallArgs},
-    pkg_management::PackageProvider,
-};
+use crate::{cmd_runner::CommandRunner, openvair_manager::cli::OpenvairManagerInstallArgs};
 
 #[derive(Default, Clone, Debug)]
 pub struct InstallerConfig {
@@ -68,35 +61,5 @@ impl<'a> InstallerConfigBuilder {
         self.config.dependencies_file =
             format!("{}/third_party_requirements.txt", self.config.project_path);
         self.config
-    }
-}
-
-pub struct OpenvairInstallerService<'a> {
-    config: InstallerConfig,
-    pkg: &'a dyn PackageProvider,
-    runner: &'a CommandRunner,
-    docker_installer: &'a dyn DockerInstaller,
-    docker: &'a DockerProvider<'a>,
-}
-
-impl<'a> OpenvairInstallerService<'a> {
-    pub fn new(
-        config: InstallerConfig,
-        pkg: &'a dyn PackageProvider,
-        runner: &'a CommandRunner,
-        docker_installer: &'a dyn DockerInstaller,
-        docker: &'a DockerProvider<'a>,
-    ) -> Self {
-        Self {
-            config,
-            pkg,
-            runner,
-            docker_installer,
-            docker,
-        }
-    }
-
-    pub fn install_openvair() {
-        info!("starting openvair installation");
     }
 }

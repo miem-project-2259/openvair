@@ -8,7 +8,7 @@ use serde_valid::Validate;
 use toml;
 
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]
-pub struct ProjectConfig {
+pub struct OpenvairProjectConfig {
     pub database: DatabaseConfig,
     pub rabbitmq: RabbitMqConfig,
     pub docker: DockerConfig,
@@ -27,18 +27,18 @@ pub struct ProjectConfig {
     pub backup: BackupConfig,
 }
 
-impl ProjectConfig {
-    fn try_from_file(path: &str) -> anyhow::Result<Self> {
+impl OpenvairProjectConfig {
+    pub fn try_from_file(path: &str) -> anyhow::Result<Self> {
         let mut contents: String = String::new();
         File::open(path)?.read_to_string(&mut contents)?;
         Self::try_from_contents(&contents)
     }
 
-    fn try_from_contents(contents: &str) -> anyhow::Result<Self> {
+    pub fn try_from_contents(contents: &str) -> anyhow::Result<Self> {
         Ok(toml::from_str::<Self>(&contents)?)
     }
 
-    fn try_save_file(&self, path: &str) -> anyhow::Result<()> {
+    pub fn try_save_file(&self, path: &str) -> anyhow::Result<()> {
         File::open(path)?.write_all(toml::to_string(self)?.as_bytes())?;
         Ok(())
     }
@@ -158,7 +158,7 @@ pub struct BackupResticConfig {
 mod tests {
     use serde_valid::Validate;
 
-    use crate::project_config::ProjectConfig;
+    use crate::project_config::OpenvairProjectConfig;
 
     #[test]
     fn test_config_read() {
@@ -231,8 +231,8 @@ dsn = ''
     password = ''  
             "#;
 
-        let conf =
-            ProjectConfig::try_from_contents(contents).expect("failed to parse project config");
+        let conf = OpenvairProjectConfig::try_from_contents(contents)
+            .expect("failed to parse project config");
         assert_eq!(conf.database.user, "aero");
         assert!(conf.validate().is_ok());
     }
