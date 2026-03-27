@@ -1,4 +1,4 @@
-use std::{process::Command, thread, time::Duration};
+use std::{fs::File, process::Command, thread, time::Duration};
 
 use log::info;
 use serde_valid::Validate;
@@ -62,6 +62,9 @@ impl<'a> OpenvairInstallerService<'a> {
         self.setup_postgres_container()?;
         self.setup_rabbitmq_container()?;
 
+        self.setup_snmp()?;
+        self.make_migrations()?;
+
         todo!()
     }
 
@@ -116,9 +119,6 @@ impl<'a> OpenvairInstallerService<'a> {
             // ---
             "openvswitch-switch",
             "multipath-tools",
-            // snmp
-            "snmp",
-            "snmpd",
         ];
 
         for p in pkgs {
@@ -263,6 +263,51 @@ impl<'a> OpenvairInstallerService<'a> {
             .build();
 
         self.docker.try_run(&run_cfg)?;
+
+        Ok(())
+    }
+
+    fn setup_snmp(&self) -> anyhow::Result<()> {
+        let pkgs = ["snmp", "snmpd"];
+
+        for p in pkgs {
+            self.pkg.try_install(p)?;
+        }
+
+        info!("appending snmp config");
+        const SNMPD_CONF: &str = "/etc/snmp/snmpd.conf";
+        if !std::fs::exists(SNMPD_CONF)? {
+            anyhow::bail!("{} file does not exist", SNMPD_CONF);
+        }
+
+        self.runner.try_pipe(
+            Command::new("echo").arg("view systemonly  included    .1.3.6.1.4.1.54641"),
+            Command::new("sudo").args(["tee", "-a", SNMPD_CONF]),
+        )?;
+        self.runner.try_pipe(
+            Command::new("echo").arg("rocommunity public default -V systemonly"),
+            Command::new("sudo").args(["tee", "-a", SNMPD_CONF]),
+        )?;
+        info!("successfullyu added lines to {}", SNMPD_CONF);
+
+        Ok(())
+    }
+
+    fn make_migrations(&self) -> anyhow::Result<()> {
+        info!("running alembic migrations");
+        self.runner.try_run(
+            Command::new("sudo")
+                .args([
+                    &format!("{}/venv/bin/python3", self.installer_config.project_path),
+                    "-m",
+                    "alembic",
+                    "-c",
+                    &format!("{}/alembic.ini", self.installer_config.project_path),
+                    "upgrade",
+                    "head",
+                ])
+                .current_dir(&self.installer_config.project_path),
+        )?;
 
         Ok(())
     }
