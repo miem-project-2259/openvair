@@ -46,7 +46,8 @@ class EventstoreServiceLayerRPCClient(EventstoreServiceLayerProtocolInterface):
         """
         self.module_name = module_name
         self.service_rpc_client = MessagingClient(
-            queue_name=RPCQueueNames.Eventstore.SERVICE_LAYER
+            #had to change Eventstore to EventStore to fix error
+            queue_name=RPCQueueNames.EventStore.SERVICE_LAYER
         )
 
     def get_all_events(self) -> List:
