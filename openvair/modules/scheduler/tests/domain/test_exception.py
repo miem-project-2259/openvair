@@ -1,11 +1,35 @@
-"""Unit tests for the scheduler domain exceptions."""
+from __future__ import annotations
 
-from openvair.modules.scheduler.domain.exception import CronJobNotFound
+import pytest
+
+from openvair.modules.scheduler.domain.exception import (
+    CronDaemonException,
+    CronJobNotFound,
+    CronTabReadException,
+    CronTabWriteException,
+    InvalidCronExpression,
+)
+from openvair.modules.scheduler.shared.base_exceptions import SchedulerDomainException
 
 
-def test_cron_job_not_found_exception() -> None:
-    """Test string representation of CronJobNotFound."""
-    job_id = "abc-123-def"
-    exc = CronJobNotFound(job_id)
+@pytest.mark.parametrize(
+    'exc_type',
+    [
+        CronJobNotFound,
+        InvalidCronExpression,
+        CronTabReadException,
+        CronTabWriteException,
+        CronDaemonException,
+    ],
+)
+def test_domain_exceptions_inherit_scheduler_domain_exception(exc_type: type[Exception]) -> None:
+    error = exc_type('boom')
 
-    assert isinstance(exc, Exception)
+    assert isinstance(error, SchedulerDomainException)
+
+
+def test_exception_string_representation() -> None:
+    error = CronJobNotFound('missing-id')
+
+    assert str(error) == 'CronJobNotFound: missing-id'
+

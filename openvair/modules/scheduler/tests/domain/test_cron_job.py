@@ -1,145 +1,218 @@
-"""Unit tests for the CronJobScheduler domain class."""
+from __future__ import annotations
 
-import uuid
 import datetime
-from unittest.mock import MagicMock
+import uuid
 
 import pytest
+from pydantic import ValidationError
 
 from openvair.modules.scheduler.domain.exception import CronJobNotFound
-from openvair.modules.scheduler.domain.cron_jobs.cron_job import (
-    CronJobScheduler,
-)
 
 
-def test_create_job_success(mock_cron_tab: MagicMock) -> None:
-    """Test successful job creation in the crontab."""
-    scheduler = CronJobScheduler(cron_obj=mock_cron_tab)
-    job_id = str(uuid.uuid4())
-
-    creation_data = {
-        "id": job_id,
-        "name": "Domain Test Job",
-        "cron_schedule": "* * * * *",
-        "command": "/usr/bin/backup",
-        "description": "Test backup"
+def _make_create_payload(**overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        'id': str(uuid.uuid4()),
+        'name': 'job',
+        'description': 'job descr',
+        'cron_schedule': '* * * * *',
+        'command': 'job.sh',
     }
-
-    mock_item = MagicMock()
-    mock_cron_tab.new.return_value = mock_item
-
-    result = scheduler.create(creation_data)
-
-    assert "job_id" in result
-    mock_cron_tab.new.assert_called_once()
-    mock_item.setall.assert_called_once_with("* * * * *")
+    payload.update(overrides)
+    return payload
 
 
-def test_get_job_success(mock_cron_tab: MagicMock) -> None:
-    """Test successful retrieval and enrichment of a job."""
-    scheduler = CronJobScheduler(cron_obj=mock_cron_tab)
+def test_create_job_success_writes_to_cron(domain_scheduler) -> None:
+    payload = _make_create_payload(name='backup', command='backup.sh', cron_schedule='*/5 * * * *')
+
+    response = domain_scheduler.create(payload)
+    job_id = response['job_id']
+
+    assert response['message'] == 'Job successfully created'
+    assert len(domain_scheduler._cron.items) == 1
+    assert f'OPENVAIR_JOB_ID:[{job_id}]' in domain_scheduler._cron.items[0].comment
+
+
+def test_create_job_with_unknown_before_job_id_is_ignored(domain_scheduler) -> None:
+    domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+
+    response = domain_scheduler.create(
+        _make_create_payload(
+            name='second',
+            command='second.sh',
+            before_job_id=uuid.uuid4(),
+        )
+    )
+
+    assert response['message'] == 'Job successfully created'
+    assert len(domain_scheduler._cron.items) == 2
+    assert domain_scheduler._cron.items[1].command == 'second.sh'
+
+
+def test_get_job_success(domain_scheduler) -> None:
     job_id = str(uuid.uuid4())
+    created_at = datetime.datetime(2026, 1, 1, 1, 0, 0)
+    updated_at = datetime.datetime(2026, 1, 1, 2, 0, 0)
+    domain_scheduler.create(
+        _make_create_payload(
+            id=job_id,
+            name='fetch-me',
+            description='readable descr',
+            command='fetch.sh',
+        )
+    )
 
-    mock_item = MagicMock()
-    mock_item.comment = f"Description OPENVAIR_JOB_ID:[{job_id}]"
-    mock_item.command = "ls"
-    mock_item.slices = "0 0 * * *"
-    mock_item.is_enabled.return_value = True
-
-    mock_schedule = MagicMock()
-    mock_schedule.get_prev.return_value = datetime.datetime.now()
-    mock_schedule.get_next.return_value = datetime.datetime.now()
-    mock_item.schedule.return_value = mock_schedule
-
-    mock_cron_tab.__iter__.return_value = [mock_item]
-
-    result = scheduler.get({"id": job_id, "name": "DB Name"})
-
-    assert str(result["id"]) == job_id
-    assert result["command"] == "ls"
-    assert result["name"] == "DB Name"
-    assert result["enabled"] is True
-
-
-def test_get_job_not_found(mock_cron_tab: MagicMock) -> None:
-    """Test getting a non-existent job raises the correct exception."""
-    scheduler = CronJobScheduler(cron_obj=mock_cron_tab)
-    mock_cron_tab.__iter__.return_value = []
-
-    with pytest.raises(CronJobNotFound):
-        scheduler.get({"id": str(uuid.uuid4())})
-
-
-def test_delete_job_success(mock_cron_tab: MagicMock) -> None:
-    """Test successfully deleting a job from the crontab."""
-    scheduler = CronJobScheduler(cron_obj=mock_cron_tab)
-    job_id = str(uuid.uuid4())
-
-    mock_item = MagicMock()
-    mock_item.comment = f"Test OPENVAIR_JOB_ID:[{job_id}]"
-    mock_cron_tab.__iter__.return_value = [mock_item]
-
-    scheduler.delete({"job_id": job_id})
-
-    mock_cron_tab.remove.assert_called_once_with(mock_item)
-
-
-def test_edit_job_success(mock_cron_tab: MagicMock) -> None:
-    """Test editing an existing job's parameters."""
-    scheduler = CronJobScheduler(cron_obj=mock_cron_tab)
-    job_id = str(uuid.uuid4())
-
-    mock_item = MagicMock()
-    mock_item.comment = f"Old Desc OPENVAIR_JOB_ID:[{job_id}]"
-    mock_item.command = "/usr/bin/backup"
-    mock_item.is_enabled.return_value = True
-
-    mock_schedule = MagicMock()
-    mock_schedule.get_prev.return_value = datetime.datetime.now()
-    mock_schedule.get_next.return_value = datetime.datetime.now()
-    mock_item.schedule.return_value = mock_schedule
-
-    mock_cron_tab.__iter__.return_value = [mock_item]
-
-    edit_data = {
-        "id": job_id,
-        "command": "/usr/bin/backup",
-        "enabled": False,
-        "cron_schedule": "0 12 * * *"
-    }
-
-    scheduler.edit(edit_data)
-
-    mock_item.set_command.assert_called_once_with("/usr/bin/backup")
-    mock_item.enable.assert_called_once_with(False) # noqa: FBT003
-    mock_item.setall.assert_called_once_with("0 12 * * *")
-
-
-def test_list_all_jobs(mock_cron_tab: MagicMock) -> None:
-    """Test listing all jobs and ignoring foreign cron entries."""
-    scheduler = CronJobScheduler(cron_obj=mock_cron_tab)
-    job_id = str(uuid.uuid4())
-
-    mock_item = MagicMock()
-    mock_item.comment = f"Desc OPENVAIR_JOB_ID:[{job_id}]"
-    mock_item.command = "/usr/bin/backup"
-    mock_item.is_enabled.return_value = True
-    mock_item.schedule.return_value = MagicMock()
-
-    alien_item = MagicMock()
-    alien_item.comment = "Custom sysadmin script"
-
-    mock_cron_tab.__iter__.return_value = [mock_item, alien_item]
-
-    result = scheduler.list_all(
+    result = domain_scheduler.get(
         {
-            "jobs_from_db": [
-                {
-                    "id": job_id,
-                    "name": "From DB"}
-                ]
-            })
+            'id': job_id,
+            'name': 'fetch-me',
+            'before_job_id': None,
+            'after_job_id': None,
+            'created_at': created_at,
+            'updated_at': updated_at,
+        }
+    )
 
-    assert len(result["jobs"]) == 1
-    assert str(result["jobs"][0]["id"]) == job_id
-    assert result["jobs"][0]["name"] == "From DB"
+    assert result['id'] == job_id
+    assert result['name'] == 'fetch-me'
+    assert result['description'] == 'readable descr'
+    assert result['command'] == 'fetch.sh'
+    assert result['enabled'] is True
+    assert result['updated_at'] == updated_at.isoformat()
+
+
+def test_get_job_invalid_uuid_raises_value_error(domain_scheduler) -> None:
+    with pytest.raises(ValueError):
+        domain_scheduler.get({'id': 'not-a-uuid'})
+
+
+def test_get_job_not_found_raises(domain_scheduler) -> None:
+    missing_id = str(uuid.uuid4())
+
+    with pytest.raises(CronJobNotFound, match=missing_id):
+        domain_scheduler.get({'id': missing_id})
+
+
+def test_edit_job_updates_existing_fields(domain_scheduler) -> None:
+    created = domain_scheduler.create(
+        _make_create_payload(name='old-name', description='old descr', command='old.sh')
+    )
+
+    updated = domain_scheduler.edit(
+        {
+            'id': created['job_id'],
+            'name': 'new-name',
+            'description': 'new descr',
+            'cron_schedule': '*/15 * * * *',
+            'command': 'new.sh',
+        }
+    )
+
+    assert updated['name'] == 'new-name'
+    assert updated['description'] == 'new descr'
+    assert updated['cron_schedule'] == '*/15 * * * *'
+    assert updated['command'] == 'new.sh'
+
+
+def test_edit_job_with_before_job_id_reorders_items(domain_scheduler) -> None:
+    first = domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    second = domain_scheduler.create(_make_create_payload(name='second', command='second.sh'))
+
+    domain_scheduler.edit(
+        {
+            'id': second['job_id'],
+            'name': 'second',
+            'before_job_id': first['job_id'],
+        }
+    )
+
+    assert domain_scheduler._cron.items[0].command == 'second.sh'
+
+
+def test_edit_job_not_found_raises(domain_scheduler) -> None:
+    with pytest.raises(CronJobNotFound):
+        domain_scheduler.edit({'id': str(uuid.uuid4()), 'name': 'new-name'})
+
+
+def test_delete_job_success(domain_scheduler) -> None:
+    created = domain_scheduler.create(
+        _make_create_payload(name='job', description='to delete', command='delete.sh')
+    )
+
+    domain_scheduler.delete({'job_id': created['job_id']})
+
+    assert domain_scheduler._cron.items == []
+
+
+def test_delete_missing_job_is_noop(domain_scheduler) -> None:
+    domain_scheduler.create(_make_create_payload(name='job', command='keep.sh'))
+
+    domain_scheduler.delete({'job_id': str(uuid.uuid4())})
+
+    assert len(domain_scheduler._cron.items) == 1
+
+
+def test_list_all_returns_jobs_dict(domain_scheduler) -> None:
+    domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    domain_scheduler.create(_make_create_payload(name='second', command='second.sh'))
+
+    result = domain_scheduler.list_all()
+
+    assert 'jobs' in result
+    assert len(result['jobs']) == 2
+    assert {job['name'] for job in result['jobs']} == {'Unknown'}
+
+
+def test_list_all_merges_db_fields(domain_scheduler) -> None:
+    created = domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    created_at = datetime.datetime(2026, 1, 1, 3, 0, 0)
+
+    result = domain_scheduler.list_all(
+        {
+            'jobs_from_db': [
+                {
+                    'id': created['job_id'],
+                    'name': 'from-db',
+                    'before_job_id': None,
+                    'after_job_id': None,
+                    'created_at': created_at,
+                    'updated_at': None,
+                }
+            ]
+        }
+    )
+
+    assert len(result['jobs']) == 1
+    assert result['jobs'][0]['name'] == 'from-db'
+    assert result['jobs'][0]['created_at'] == created_at.isoformat()
+
+
+def test_list_all_ignores_malformed_ids(domain_scheduler, fake_cron) -> None:
+    domain_scheduler.create(_make_create_payload(name='valid', command='valid.sh'))
+    fake_cron.new(command='bad.sh', comment='bad OPENVAIR_JOB_ID:[not-a-uuid]')
+
+    result = domain_scheduler.list_all()
+
+    assert len(result['jobs']) == 1
+
+
+def test_create_job_with_invalid_command_raises_validation_error(domain_scheduler) -> None:
+    with pytest.raises(ValidationError):
+        domain_scheduler.create(
+            _make_create_payload(name='bad', description='Invalid command', command='rm -rf /')
+        )
+
+
+def test_edit_job_with_conflicting_dependencies_raises_validation_error(domain_scheduler) -> None:
+    first = domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    second = domain_scheduler.create(_make_create_payload(name='second', command='second.sh'))
+
+    with pytest.raises(ValidationError):
+        domain_scheduler.edit(
+            {
+                'id': second['job_id'],
+                'before_job_id': first['job_id'],
+                'after_job_id': first['job_id'],
+            }
+        )
+
+

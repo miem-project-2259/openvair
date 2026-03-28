@@ -49,6 +49,10 @@ class CronJobScheduler(BaseScheduler):
         else:
             self._cron = CronTab(user=True)
 
+    def list_all(self) -> list[dict[str, Any]]:
+        """Return all known jobs serialized through the same path as `get`."""
+        return [self.get(str(job_id)) for job_id in self.jobs]
+
     def __create_job(self, req: RequestCreateJob, job_id_str: str) -> CronItem:
         with self._cron as cron:
             before_job = None

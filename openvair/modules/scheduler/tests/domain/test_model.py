@@ -1,48 +1,90 @@
-"""Unit tests for the scheduler domain models and factories."""
+from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from openvair.modules.scheduler.domain.base import BaseScheduler
-from openvair.modules.scheduler.domain.model import SchedulerFactory
-from openvair.modules.scheduler.domain.cron_jobs.cron_job import (
-    CronJobScheduler,
+from openvair.modules.scheduler.domain.model import (
+    DomainSchedulerModelDTO,
+    SchedulerFactory,
 )
 
 
-@patch('openvair.modules.scheduler.domain.model.CronTab')
-def test_scheduler_factory_get_system_cron(mock_crontab_cls: MagicMock) -> None:
-    """Test that the factory returns a CronJobScheduler for 'system_cron'.
+class _DummyScheduler(BaseScheduler):
+    def __init__(self, *, cron_obj: _FactoryFakeCronTab) -> None:
+        super().__init__()
+        self._cron = cron_obj
 
-    The CronTab class is mocked to prevent the factory from executing
-    privileged OS commands (like `crontab -u root`) during testing.
-    """
+    def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:
+        return creation_data
+
+    def get(self, job_id: str) -> dict[str, Any]:
+        return {'job_id': job_id}
+
+    def list_all(self) -> list[dict[str, Any]]:
+        return []
+
+    def edit(self, editing_data: dict[str, Any]) -> dict[str, Any]:
+        return editing_data
+
+    def delete(self, job_id: str) -> None:
+        return None
+
+
+class _FactoryFakeCronTab:
+    def __init__(self, *, user: str | None = None) -> None:
+        self.user = user
+
+
+def test_domain_scheduler_model_dto_parses_alias() -> None:
+    dto = DomainSchedulerModelDTO.model_validate({'type': 'system_cron', 'user': 'root'})
+
+    assert dto.scheduler_type == 'system_cron'
+    assert dto.user == 'root'
+
+
+def test_domain_scheduler_model_dto_requires_type() -> None:
+    with pytest.raises(ValidationError):
+        DomainSchedulerModelDTO.model_validate({'user': 'root'})
+
+
+def test_scheduler_factory_returns_scheduler(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        'openvair.modules.scheduler.domain.model.CronTab',
+        _FactoryFakeCronTab,
+    )
+
     factory = SchedulerFactory()
-    scheduler_data = {'type': 'system_cron', 'user': 'root'}
+    monkeypatch.setattr(factory, '_scheduler_classes', {'system_cron': _DummyScheduler})
 
-    scheduler = factory.get_scheduler(scheduler_data)
+    scheduler = factory.get_scheduler({'type': 'system_cron', 'user': 'alice'})
 
-    assert isinstance(scheduler, BaseScheduler)
-    assert isinstance(scheduler, CronJobScheduler)
-    mock_crontab_cls.assert_called_once_with(user='root')
+    assert isinstance(scheduler, _DummyScheduler)
+    assert isinstance(scheduler._cron, _FactoryFakeCronTab)
+    assert scheduler._cron.user == 'alice'
 
 
-def test_scheduler_factory_unknown_type() -> None:
-    """Test that the factory raises an error for unknown scheduler types."""
+def test_scheduler_factory_unknown_type_raises_value_error() -> None:
     factory = SchedulerFactory()
-    scheduler_data = {'type': 'unknown_scheduler_type'}
 
-    with pytest.raises(Exception) as exc_info:
-        factory.get_scheduler(scheduler_data)
-
-    assert exc_info.value is not None
+    with pytest.raises(ValueError, match="Unknown scheduler type"):
+        factory.get_scheduler({'type': 'unknown', 'user': 'root'})
 
 
-def test_scheduler_factory_registered_types() -> None:
-    """Test that 'system_cron' is correctly registered in the factory."""
-    registered_schedulers = getattr(SchedulerFactory, '_schedulers', {})
+def test_scheduler_factory_default_mapping_returns_cron_scheduler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        'openvair.modules.scheduler.domain.model.CronTab',
+        _FactoryFakeCronTab,
+    )
 
-    if registered_schedulers:
-        assert 'system_cron' in registered_schedulers
-        assert registered_schedulers['system_cron'] is CronJobScheduler
+    factory = SchedulerFactory()
+    scheduler = factory.get_scheduler({'type': 'system_cron', 'user': 'root'})
+
+    assert scheduler.__class__.__name__ == 'CronJobScheduler'
+    assert isinstance(scheduler._cron, _FactoryFakeCronTab)
+    assert scheduler._cron.user == 'root'
+
