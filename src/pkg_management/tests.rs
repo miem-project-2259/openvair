@@ -1,11 +1,12 @@
+#[cfg(feature = "ubuntu")]
+use crate::tests::fixtures::command_runner;
+
 use super::*;
-use crate::tests::_get_runner;
 
 #[cfg(feature = "ubuntu")]
-#[test]
-fn test_ubuntu_package_install() {
-    let runner = _get_runner();
-    let provider = UbuntuPackageProvider::new(&runner);
+#[rstest]
+fn test_ubuntu_package_install(command_runner: CommandRunner) {
+    let provider = UbuntuPackageProvider::new(&command_runner);
 
     let res = provider.try_install("hello");
     assert!(

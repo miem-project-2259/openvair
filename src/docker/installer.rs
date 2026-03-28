@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{process::Command, rc::Rc};
 
 use crate::{
     cmd_runner::CommandRunner,
@@ -9,15 +9,15 @@ pub trait DockerInstaller {
     fn install_docker(&self) -> anyhow::Result<()>;
 }
 
-pub struct UbuntuDockerInstaller<'a> {
-    pkg: &'a UbuntuPackageProvider<'a>,
-    runner: &'a CommandRunner,
+pub struct UbuntuDockerInstaller {
+    pkg: Rc<UbuntuPackageProvider>,
+    runner: Rc<CommandRunner>,
     os_type: String,
     proc: String,
 }
 
-impl<'a> UbuntuDockerInstaller<'a> {
-    pub fn new(runner: &'a CommandRunner, pkg: &'a UbuntuPackageProvider<'a>) -> Self {
+impl UbuntuDockerInstaller {
+    pub fn new(runner: Rc<CommandRunner>, pkg: Rc<UbuntuPackageProvider>) -> Self {
         Self {
             runner,
             pkg,
@@ -35,7 +35,7 @@ impl<'a> UbuntuDockerInstaller<'a> {
     }
 }
 
-impl<'a> DockerInstaller for UbuntuDockerInstaller<'a> {
+impl<'a> DockerInstaller for UbuntuDockerInstaller {
     fn install_docker(&self) -> anyhow::Result<()> {
         let pkgs = [
             "apt-transport-https",

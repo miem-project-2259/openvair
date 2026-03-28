@@ -1,5 +1,5 @@
 use crate::cmd_runner::{CommandResult, CommandRunner};
-use std::process::Command;
+use std::{process::Command, rc::Rc};
 
 pub trait PackageProvider {
     fn try_check_installed(&self, package_name: &str) -> anyhow::Result<bool>;
@@ -15,17 +15,17 @@ pub trait PackageProvider {
 }
 
 #[derive(Clone, Debug)]
-pub struct UbuntuPackageProvider<'a> {
-    runner: &'a CommandRunner,
+pub struct UbuntuPackageProvider {
+    runner: Rc<CommandRunner>,
 }
 
-impl<'a> UbuntuPackageProvider<'a> {
-    pub fn new(runner: &'a CommandRunner) -> Self {
+impl UbuntuPackageProvider {
+    pub fn new(runner: Rc<CommandRunner>) -> Self {
         UbuntuPackageProvider { runner }
     }
 }
 
-impl PackageProvider for UbuntuPackageProvider<'_> {
+impl PackageProvider for UbuntuPackageProvider {
     fn try_check_installed(&self, package_name: &str) -> anyhow::Result<bool> {
         let mut dpkg_cmd = Command::new("dpkg");
         let mut grep_cmd = Command::new("grep");

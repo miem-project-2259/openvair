@@ -71,24 +71,24 @@ impl CommandRunner {
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::_get_runner;
+    use rstest::rstest;
+
+    use crate::tests::fixtures::command_runner;
 
     use super::*;
 
-    #[test]
-    fn test_runner_run_command() {
-        let runner = _get_runner();
+    #[rstest]
+    fn test_runner_run_command(command_runner: CommandRunner) {
         let mut cmd = Command::new("echo");
-        let res = runner.run(cmd.arg("Hello world"));
+        let res = command_runner.run(cmd.arg("Hello world"));
         assert_eq!(res.output, String::from("Hello world\n"));
     }
 
-    #[test]
-    fn test_runner_pipe_commands() {
-        let runner = _get_runner();
+    #[rstest]
+    fn test_runner_pipe_commands(command_runner: CommandRunner) {
         let mut cmd_src = Command::new("echo");
         let mut cmd_sed = Command::new("sed");
-        let res = runner.pipe(cmd_src.arg("Hello world"), cmd_sed.arg("s/world/me/"));
+        let res = command_runner.pipe(cmd_src.arg("Hello world"), cmd_sed.arg("s/world/me/"));
         assert_eq!(res.output, String::from("Hello me\n"));
         assert!(res.status.success())
     }

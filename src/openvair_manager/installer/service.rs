@@ -1,5 +1,6 @@
-use std::{fs::File, process::Command, thread, time::Duration};
+use std::{fs::File, process::Command, rc::Rc, thread, time::Duration};
 
+use bcrypt::DEFAULT_COST;
 use log::info;
 use serde_valid::Validate;
 
@@ -17,22 +18,22 @@ use crate::{
 pub struct OpenvairInstallerService<'a> {
     pub installer_config: InstallerConfig,
     pub project_config: OpenvairProjectConfig,
-    pkg: &'a dyn PackageProvider,
+    pkg: Rc<dyn PackageProvider>,
     runner: &'a CommandRunner,
     docker_installer: &'a dyn DockerInstaller,
-    docker: &'a DockerProvider<'a>,
-    python: &'a PythonProvider<'a>,
+    docker: &'a DockerProvider,
+    python: &'a PythonProvider,
 }
 
 impl<'a> OpenvairInstallerService<'a> {
     pub fn new(
         installer_config: InstallerConfig,
         project_config: OpenvairProjectConfig,
-        pkg: &'a dyn PackageProvider,
+        pkg: Rc<dyn PackageProvider>,
         runner: &'a CommandRunner,
         docker_installer: &'a dyn DockerInstaller,
-        docker: &'a DockerProvider<'a>,
-        python: &'a PythonProvider<'a>,
+        docker: &'a DockerProvider,
+        python: &'a PythonProvider,
     ) -> Self {
         Self {
             installer_config,
@@ -248,6 +249,15 @@ impl<'a> OpenvairInstallerService<'a> {
             ),
         )?;
 
+        // Setup default user
+        let hashed_password = bcrypt::hash(&self.project_config.default_user.password, DEFAULT_COST)?;
+        self.docker.try_exec(PG_CONTAINER_NAME,
+            &format!(
+                "psql -U {} -d {} -c \"INSERT INTO USERS (id, username, password) VALUES ('0b677738-34ff-4f9e-b1f6-5962065c0207', '{}', NULL, 't', '{}')\"",
+                &self.installer_config.user, PG_DB_NAME, &self.project_config.default_user.login, hashed_password
+            )
+        )?;
+
         Ok(())
     }
 
@@ -399,7 +409,9 @@ impl<'a> OpenvairInstallerService<'a> {
     }
 
     fn create_db_user(&self) -> anyhow::Result<()> {
-        todo!()
+        self.docker.try_exec("postgres", command)
+
+        Ok(())
     }
 
     fn install_uv(&self) -> anyhow::Result<()> {
@@ -419,12 +431,4 @@ impl<'a> OpenvairInstallerService<'a> {
             .try_save_file(&self.installer_config.project_config_file)?;
         Ok(())
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tests::_get_runner;
-    #[test]
-    fn test_db_pass_hashing() {}
 }

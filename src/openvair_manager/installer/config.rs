@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{process::Command, rc::Rc};
 
 use log::info;
 
@@ -39,7 +39,7 @@ impl<'a> InstallerConfigBuilder {
 
     pub fn build(
         mut self,
-        runner: &'a CommandRunner,
+        runner: Rc<CommandRunner>,
         install_args: &'a OpenvairManagerInstallArgs,
     ) -> InstallerConfig {
         self.config.user = install_args.user.clone();

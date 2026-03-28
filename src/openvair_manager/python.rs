@@ -1,15 +1,15 @@
-use std::process::Command;
+use std::{process::Command, rc::Rc};
 
 use crate::cmd_runner::CommandRunner;
 
 #[derive(Clone, Debug)]
-pub struct PythonProvider<'a> {
-    runner: &'a CommandRunner,
+pub struct PythonProvider {
+    runner: Rc<CommandRunner>,
     python_path: String,
 }
 
-impl<'a> PythonProvider<'a> {
-    pub const fn new(runner: &'a CommandRunner) -> Self {
+impl PythonProvider {
+    pub fn new(runner: Rc<CommandRunner>) -> Self {
         Self {
             runner,
             python_path: String::new(),

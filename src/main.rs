@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{process::Command, rc::Rc};
 
 use clap::Parser;
 use command_macros::cmd;
@@ -15,7 +15,7 @@ use crate::{
     project_config::OpenvairProjectConfig,
 };
 
-pub mod tests;
+mod tests;
 
 pub mod cmd_runner;
 
@@ -28,17 +28,17 @@ pub mod docker;
 pub mod openvair_manager;
 
 fn main() -> anyhow::Result<()> {
-    let runner = CommandRunner::new();
-    let pkg = UbuntuPackageProvider::new(&runner);
-    let mut docker_installer = UbuntuDockerInstaller::new(&runner, &pkg);
-    let docker = DockerProvider::new(&runner);
-    let mut python = PythonProvider::new(&runner);
+    let runner = Rc::new(CommandRunner::new());
+    let pkg = Rc::new(UbuntuPackageProvider::new(runner.clone()));
+    let mut docker_installer = UbuntuDockerInstaller::new(runner.clone(), pkg.clone());
+    let docker = DockerProvider::new(runner.clone());
+    let mut python = PythonProvider::new(runner.clone());
 
     let cli = OpenvairManagerCli::parse();
     match cli.command {
         openvair_manager::cli::ManagerCommands::Install(openvair_manager_install_args) => {
             let installer_cfg =
-                InstallerConfig::builder().build(&runner, &openvair_manager_install_args);
+                InstallerConfig::builder().build(runner.clone(), &openvair_manager_install_args);
             let project_cfg =
                 OpenvairProjectConfig::try_from_file(&installer_cfg.project_config_file)?;
 
@@ -56,7 +56,7 @@ fn main() -> anyhow::Result<()> {
             let mut installer = OpenvairInstallerService::new(
                 installer_cfg,
                 project_cfg,
-                &pkg,
+                pkg,
                 &runner,
                 &docker_installer,
                 &docker,

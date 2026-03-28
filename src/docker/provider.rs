@@ -1,13 +1,13 @@
-use std::process::Command;
+use std::{process::Command, rc::Rc};
 
 use crate::cmd_runner::{CommandResult, CommandRunner};
 
-pub struct DockerProvider<'a> {
-    pub runner: &'a CommandRunner,
+pub struct DockerProvider {
+    pub runner: Rc<CommandRunner>,
 }
 
-impl<'a> DockerProvider<'a> {
-    pub fn new(runner: &'a CommandRunner) -> DockerProvider<'a> {
+impl DockerProvider {
+    pub fn new(runner: Rc<CommandRunner>) -> DockerProvider {
         Self { runner }
     }
 }
@@ -79,7 +79,7 @@ impl DockerRunConfigBuilder {
     }
 }
 
-impl<'a> DockerProvider<'a> {
+impl DockerProvider {
     pub fn try_run(&self, run_config: &DockerRunConfig) -> anyhow::Result<CommandResult> {
         let mut cmd_base = Command::new("sudo");
         let mut args: Vec<&str> = vec!["docker", "run"];
