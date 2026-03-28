@@ -5,23 +5,23 @@ use crate::cmd_runner::CommandRunner;
 #[derive(Clone, Debug)]
 pub struct PythonProvider<'a> {
     runner: &'a CommandRunner,
-    venv_path: String,
+    python_path: String,
 }
 
 impl<'a> PythonProvider<'a> {
-    pub fn new(runner: &'a CommandRunner) -> Self {
+    pub const fn new(runner: &'a CommandRunner) -> Self {
         Self {
             runner,
-            venv_path: String::new(),
+            python_path: String::new(),
         }
     }
 
-    pub fn set_venv_path(&mut self, path: &str) {
-        self.venv_path = path.to_string();
+    pub fn set_python_path(&mut self, path: &str) {
+        self.python_path = path.to_string();
     }
 
-    fn install_cmd(&self) -> Command {
-        Command::new(format!("{}/bin/python3", self.venv_path))
+    fn python_cmd(&self) -> Command {
+        Command::new(&self.python_path)
     }
 
     fn install_args() -> Vec<String> {
@@ -35,7 +35,7 @@ impl<'a> PythonProvider<'a> {
     pub fn install(&self, package_name: &str) -> anyhow::Result<()> {
         let mut args = Self::install_args();
         args.push(package_name.to_string());
-        self.runner.try_run(self.install_cmd().args(args))?;
+        self.runner.try_run(self.python_cmd().args(args))?;
 
         Ok(())
     }
@@ -43,7 +43,7 @@ impl<'a> PythonProvider<'a> {
     pub fn install_requirements(&self, requirements_path: &str) -> anyhow::Result<()> {
         let mut args = Self::install_args();
         args.extend([String::from("-r"), requirements_path.to_string()]);
-        self.runner.try_run(self.install_cmd().args(args))?;
+        self.runner.try_run(self.python_cmd().args(args))?;
 
         Ok(())
     }

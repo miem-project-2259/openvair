@@ -420,3 +420,11 @@ impl<'a> OpenvairInstallerService<'a> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::_get_runner;
+    #[test]
+    fn test_db_pass_hashing() {}
+}

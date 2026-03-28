@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
                 .to_lowercase();
             docker_installer.set_os_type(&os_type);
             docker_installer.set_proc(&installer_cfg.processor_type);
-            python.set_venv_path(&format!("{}/venv", installer_cfg.project_path));
+            python.set_python_path(&format!("{}/venv/bin/python3", installer_cfg.project_path));
 
             let mut installer = OpenvairInstallerService::new(
                 installer_cfg,
