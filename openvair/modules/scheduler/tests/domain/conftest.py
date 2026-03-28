@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from crontab import CronTab, CronItem
@@ -18,13 +18,13 @@ class _FakeSchedule:
         self._last = now - datetime.timedelta(minutes=1)
         self._next = now + datetime.timedelta(minutes=1)
 
-    def get_last(self) -> datetime.datetime:
+    def get_last(self, *_args: object, **_kwargs: object) -> datetime.datetime:
         return self._last
 
-    def get_next(self) -> datetime.datetime:
+    def get_next(self, *_args: object, **_kwargs: object) -> datetime.datetime:
         return self._next
 
-    def get_prev(self) -> datetime.datetime:
+    def get_prev(self, *_args: object, **_kwargs: object) -> datetime.datetime:
         return self._last
 
 
@@ -194,6 +194,18 @@ def fake_cron() -> _FakeCronTab:
 
 
 @pytest.fixture
-def scheduler(fake_cron: _FakeCronTab) -> _TestCronJobScheduler:
-    return _TestCronJobScheduler(fake_cron)
+def domain_scheduler(fake_cron: _FakeCronTab) -> CronJobScheduler:
+    return CronJobScheduler(cast(CronTab, fake_cron))
+
+
+@pytest.fixture
+def adapter_scheduler(fake_cron: _FakeCronTab) -> _TestCronJobScheduler:
+    return _TestCronJobScheduler(cast(CronTab, fake_cron))
+
+
+@pytest.fixture
+def scheduler(adapter_scheduler: _TestCronJobScheduler) -> _TestCronJobScheduler:
+    """Backward-compatible alias for legacy tests."""
+    return adapter_scheduler
+
 

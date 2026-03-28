@@ -9,129 +9,97 @@ from pydantic import ValidationError
 from openvair.modules.scheduler.domain.exception import CronJobNotFound
 
 
-def _as_uuid(value: str | uuid.UUID) -> uuid.UUID:
-    return value if isinstance(value, uuid.UUID) else uuid.UUID(value)
-
-
-def test_create_job_success(scheduler) -> None:
-    payload = {
-        'name': 'backup',
-        'description': 'Backup job',
-        'cron_schedule': '*/5 * * * *',
-        'command': 'backup.sh',
+def _make_create_payload(**overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        'id': str(uuid.uuid4()),
+        'name': 'job',
+        'description': 'job descr',
+        'cron_schedule': '* * * * *',
+        'command': 'job.sh',
     }
+    payload.update(overrides)
+    return payload
 
-    response = scheduler.create(payload)
-    job_id = _as_uuid(response['job_id'])
+
+def test_create_job_success_writes_to_cron(domain_scheduler) -> None:
+    payload = _make_create_payload(name='backup', command='backup.sh', cron_schedule='*/5 * * * *')
+
+    response = domain_scheduler.create(payload)
+    job_id = response['job_id']
 
     assert response['message'] == 'Job successfully created'
-    assert job_id in scheduler.jobs
-    assert len(scheduler.jobs) == 1
-    assert len(scheduler._cron.items) == 1
+    assert len(domain_scheduler._cron.items) == 1
+    assert f'OPENVAIR_JOB_ID:[{job_id}]' in domain_scheduler._cron.items[0].comment
 
 
-def test_create_job_with_before_job_id_links_chain(scheduler) -> None:
-    first = scheduler.create(
-        {
-            'name': 'first',
-            'description': 'First job',
-            'cron_schedule': '* * * * *',
-            'command': 'first.sh',
-        }
-    )
-    first_id = _as_uuid(first['job_id'])
+def test_create_job_with_unknown_before_job_id_is_ignored(domain_scheduler) -> None:
+    domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
 
-    second = scheduler.create(
-        {
-            'name': 'second',
-            'description': 'Second job',
-            'cron_schedule': '*/2 * * * *',
-            'command': 'second.sh',
-            'before_job_id': first_id,
-        }
-    )
-    second_id = _as_uuid(second['job_id'])
-
-    assert scheduler.jobs[first_id].previous_id == second_id
-    assert scheduler.jobs[second_id].next_id == first_id
-    assert scheduler._cron.items[0].command == 'second.sh'
-
-
-def test_create_job_with_unknown_before_job_id_raises(scheduler) -> None:
-    with pytest.raises(CronJobNotFound):
-        scheduler.create(
-            {
-                'name': 'bad',
-                'description': 'Unknown dependency',
-                'cron_schedule': '* * * * *',
-                'command': 'bad.sh',
-                'before_job_id': uuid.uuid4(),
-            }
+    response = domain_scheduler.create(
+        _make_create_payload(
+            name='second',
+            command='second.sh',
+            before_job_id=uuid.uuid4(),
         )
+    )
+
+    assert response['message'] == 'Job successfully created'
+    assert len(domain_scheduler._cron.items) == 2
+    assert domain_scheduler._cron.items[1].command == 'second.sh'
 
 
-def test_get_job_success_when_updated_at_present(scheduler) -> None:
-    created = scheduler.create(
+def test_get_job_success(domain_scheduler) -> None:
+    job_id = str(uuid.uuid4())
+    created_at = datetime.datetime(2026, 1, 1, 1, 0, 0)
+    updated_at = datetime.datetime(2026, 1, 1, 2, 0, 0)
+    domain_scheduler.create(
+        _make_create_payload(
+            id=job_id,
+            name='fetch-me',
+            description='readable descr',
+            command='fetch.sh',
+        )
+    )
+
+    result = domain_scheduler.get(
         {
-            'name': 'job',
-            'description': 'job descr',
-            'cron_schedule': '* * * * *',
-            'command': 'job.sh',
+            'id': job_id,
+            'name': 'fetch-me',
+            'before_job_id': None,
+            'after_job_id': None,
+            'created_at': created_at,
+            'updated_at': updated_at,
         }
     )
-    job_id = _as_uuid(created['job_id'])
-    scheduler.jobs[job_id].updated_at = datetime.datetime(2026, 1, 1, 1, 0, 0)
-
-    result = scheduler.get(str(job_id))
 
     assert result['id'] == job_id
-    assert result['name'] == 'job'
-    assert result['description'] == 'job descr'
-    assert result['command'] == 'job.sh'
+    assert result['name'] == 'fetch-me'
+    assert result['description'] == 'readable descr'
+    assert result['command'] == 'fetch.sh'
     assert result['enabled'] is True
+    assert result['updated_at'] == updated_at.isoformat()
 
 
-def test_get_job_without_updated_at_returns_none(scheduler) -> None:
-    created = scheduler.create(
-        {
-            'name': 'job',
-            'description': 'job descr',
-            'cron_schedule': '* * * * *',
-            'command': 'job.sh',
-        }
-    )
-
-    result = scheduler.get(str(created['job_id']))
-
-    assert result['updated_at'] is None
-
-
-def test_get_job_invalid_uuid_raises_value_error(scheduler) -> None:
+def test_get_job_invalid_uuid_raises_value_error(domain_scheduler) -> None:
     with pytest.raises(ValueError):
-        scheduler.get('not-a-uuid')
+        domain_scheduler.get({'id': 'not-a-uuid'})
 
 
-def test_get_job_not_found_raises(scheduler) -> None:
+def test_get_job_not_found_raises(domain_scheduler) -> None:
     missing_id = str(uuid.uuid4())
 
     with pytest.raises(CronJobNotFound, match=missing_id):
-        scheduler.get(missing_id)
+        domain_scheduler.get({'id': missing_id})
 
 
-def test_edit_job_updates_existing_fields(scheduler) -> None:
-    created = scheduler.create(
-        {
-            'name': 'old-name',
-            'description': 'old descr',
-            'cron_schedule': '* * * * *',
-            'command': 'old.sh',
-        }
+def test_edit_job_updates_existing_fields(domain_scheduler) -> None:
+    created = domain_scheduler.create(
+        _make_create_payload(name='old-name', description='old descr', command='old.sh')
     )
-    job_id = created['job_id']
 
-    updated = scheduler.edit(
+    updated = domain_scheduler.edit(
         {
-            'job_id': job_id,
+            'id': created['job_id'],
             'name': 'new-name',
             'description': 'new descr',
             'cron_schedule': '*/15 * * * *',
@@ -145,130 +113,103 @@ def test_edit_job_updates_existing_fields(scheduler) -> None:
     assert updated['command'] == 'new.sh'
 
 
-def test_edit_job_with_before_job_id_recreates_cron_item(scheduler) -> None:
-    first = scheduler.create(
+def test_edit_job_with_before_job_id_reorders_items(domain_scheduler) -> None:
+    first = domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    second = domain_scheduler.create(_make_create_payload(name='second', command='second.sh'))
+
+    domain_scheduler.edit(
         {
-            'name': 'first',
-            'description': 'first',
-            'cron_schedule': '* * * * *',
-            'command': 'first.sh',
-        }
-    )
-    second = scheduler.create(
-        {
+            'id': second['job_id'],
             'name': 'second',
-            'description': 'second',
-            'cron_schedule': '*/2 * * * *',
-            'command': 'second.sh',
+            'before_job_id': first['job_id'],
         }
     )
 
-    second_id = _as_uuid(second['job_id'])
-    old_item = scheduler.jobs[second_id].cron_item
-
-    scheduler.edit({'job_id': second['job_id'], 'before_job_id': _as_uuid(first['job_id'])})
-
-    assert scheduler.jobs[second_id].cron_item is not old_item
-    assert scheduler._cron.items[0].command == 'second.sh'
+    assert domain_scheduler._cron.items[0].command == 'second.sh'
 
 
-def test_edit_job_not_found_raises(scheduler) -> None:
+def test_edit_job_not_found_raises(domain_scheduler) -> None:
     with pytest.raises(CronJobNotFound):
-        scheduler.edit({'job_id': str(uuid.uuid4()), 'name': 'new-name'})
+        domain_scheduler.edit({'id': str(uuid.uuid4()), 'name': 'new-name'})
 
 
-def test_delete_job_success(scheduler) -> None:
-    created = scheduler.create(
-        {
-            'name': 'job',
-            'description': 'to delete',
-            'cron_schedule': '* * * * *',
-            'command': 'delete.sh',
-        }
-    )
-    job_id = created['job_id']
-
-    scheduler.delete(str(job_id))
-
-    assert scheduler.jobs == {}
-    assert scheduler._cron.items == []
-
-
-def test_delete_job_invalid_uuid_raises_value_error(scheduler) -> None:
-    with pytest.raises(ValueError):
-        scheduler.delete('not-a-uuid')
-
-
-def test_delete_job_not_found_raises(scheduler) -> None:
-    with pytest.raises(CronJobNotFound):
-        scheduler.delete(str(uuid.uuid4()))
-
-
-def test_list_all_returns_all_jobs(scheduler) -> None:
-    first = scheduler.create(
-        {
-            'name': 'first',
-            'description': 'first',
-            'cron_schedule': '* * * * *',
-            'command': 'first.sh',
-        }
-    )
-    second = scheduler.create(
-        {
-            'name': 'second',
-            'description': 'second',
-            'cron_schedule': '*/2 * * * *',
-            'command': 'second.sh',
-        }
+def test_delete_job_success(domain_scheduler) -> None:
+    created = domain_scheduler.create(
+        _make_create_payload(name='job', description='to delete', command='delete.sh')
     )
 
-    first_id = _as_uuid(first['job_id'])
-    second_id = _as_uuid(second['job_id'])
+    domain_scheduler.delete({'job_id': created['job_id']})
 
-    # `get` currently requires updated_at in this implementation.
-    scheduler.jobs[first_id].updated_at = datetime.datetime.now()
-    scheduler.jobs[second_id].updated_at = datetime.datetime.now()
-
-    jobs = scheduler.list_all()
-
-    assert len(jobs) == 2
-    assert {job['name'] for job in jobs} == {'first', 'second'}
+    assert domain_scheduler._cron.items == []
 
 
-def test_create_job_with_invalid_command_raises_validation_error(scheduler) -> None:
+def test_delete_missing_job_is_noop(domain_scheduler) -> None:
+    domain_scheduler.create(_make_create_payload(name='job', command='keep.sh'))
+
+    domain_scheduler.delete({'job_id': str(uuid.uuid4())})
+
+    assert len(domain_scheduler._cron.items) == 1
+
+
+def test_list_all_returns_jobs_dict(domain_scheduler) -> None:
+    domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    domain_scheduler.create(_make_create_payload(name='second', command='second.sh'))
+
+    result = domain_scheduler.list_all()
+
+    assert 'jobs' in result
+    assert len(result['jobs']) == 2
+    assert {job['name'] for job in result['jobs']} == {'Unknown'}
+
+
+def test_list_all_merges_db_fields(domain_scheduler) -> None:
+    created = domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    created_at = datetime.datetime(2026, 1, 1, 3, 0, 0)
+
+    result = domain_scheduler.list_all(
+        {
+            'jobs_from_db': [
+                {
+                    'id': created['job_id'],
+                    'name': 'from-db',
+                    'before_job_id': None,
+                    'after_job_id': None,
+                    'created_at': created_at,
+                    'updated_at': None,
+                }
+            ]
+        }
+    )
+
+    assert len(result['jobs']) == 1
+    assert result['jobs'][0]['name'] == 'from-db'
+    assert result['jobs'][0]['created_at'] == created_at.isoformat()
+
+
+def test_list_all_ignores_malformed_ids(domain_scheduler, fake_cron) -> None:
+    domain_scheduler.create(_make_create_payload(name='valid', command='valid.sh'))
+    fake_cron.new(command='bad.sh', comment='bad OPENVAIR_JOB_ID:[not-a-uuid]')
+
+    result = domain_scheduler.list_all()
+
+    assert len(result['jobs']) == 1
+
+
+def test_create_job_with_invalid_command_raises_validation_error(domain_scheduler) -> None:
     with pytest.raises(ValidationError):
-        scheduler.create(
-            {
-                'name': 'bad',
-                'description': 'Invalid command',
-                'cron_schedule': '* * * * *',
-                'command': 'rm -rf /',
-            }
+        domain_scheduler.create(
+            _make_create_payload(name='bad', description='Invalid command', command='rm -rf /')
         )
 
 
-def test_edit_job_with_conflicting_dependencies_raises_validation_error(scheduler) -> None:
-    first = scheduler.create(
-        {
-            'name': 'first',
-            'description': 'first',
-            'cron_schedule': '* * * * *',
-            'command': 'first.sh',
-        }
-    )
-    second = scheduler.create(
-        {
-            'name': 'second',
-            'description': 'second',
-            'cron_schedule': '* * * * *',
-            'command': 'second.sh',
-        }
-    )
+def test_edit_job_with_conflicting_dependencies_raises_validation_error(domain_scheduler) -> None:
+    first = domain_scheduler.create(_make_create_payload(name='first', command='first.sh'))
+    second = domain_scheduler.create(_make_create_payload(name='second', command='second.sh'))
 
     with pytest.raises(ValidationError):
-        scheduler.edit(
+        domain_scheduler.edit(
             {
-                'job_id': second['job_id'],
+                'id': second['job_id'],
                 'before_job_id': first['job_id'],
                 'after_job_id': first['job_id'],
             }
