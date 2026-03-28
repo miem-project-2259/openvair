@@ -13,9 +13,9 @@ from openvair.modules.scheduler.domain.model import (
 
 
 class _DummyScheduler(BaseScheduler):
-    def __init__(self, *, crontab: _FactoryFakeCronTab) -> None:
+    def __init__(self, *, cron_obj: _FactoryFakeCronTab) -> None:
         super().__init__()
-        self._cron = crontab
+        self._cron = cron_obj
 
     def create(self, creation_data: dict[str, Any]) -> dict[str, Any]:
         return creation_data

@@ -81,6 +81,6 @@ class SchedulerFactory(AbstractSchedulerFactory):
             raise ValueError(error_msg)
 
         cron_obj = CronTab(user=dto.user)
-        scheduler_manager = scheduler_class(crontab=cron_obj)
+        scheduler_manager = scheduler_class(cron_obj=cron_obj)
 
         return cast(BaseScheduler, scheduler_manager)
