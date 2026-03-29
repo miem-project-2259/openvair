@@ -32,7 +32,7 @@ class SchedulerJob(Base):
 
     __tablename__ = 'scheduler_jobs'
 
-    id: Mapped[uuid.UUID] = mapped_column(  # Прилетают от Саши
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
