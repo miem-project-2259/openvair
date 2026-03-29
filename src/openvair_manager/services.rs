@@ -20,13 +20,13 @@ impl SystemdServiceProvider {
 }
 
 impl ServiceProvider for SystemdServiceProvider {
-    fn restart_service(&self, name: impl AsRef<str>) -> anyhow::Result<()> {
+    fn restart_service(&self, name: &str) -> anyhow::Result<()> {
         self.runner
             .try_run(Command::new("sudo").args(["systemctl", "restart", name.as_ref()]))?;
         Ok(())
     }
 
-    fn add_service_from_file(&self, file: impl AsRef<str>) -> anyhow::Result<()> {
+    fn add_service_from_file(&self, file: &str) -> anyhow::Result<()> {
         self.runner.try_run(Command::new("sudo").args([
             "cp",
             file.as_ref(),
@@ -35,13 +35,13 @@ impl ServiceProvider for SystemdServiceProvider {
         Ok(())
     }
 
-    fn enable_service(&self, name: impl AsRef<str>) -> anyhow::Result<()> {
+    fn enable_service(&self, name: &str) -> anyhow::Result<()> {
         self.runner
             .try_run(Command::new("sudo").args(["systemctl", "enable", name.as_ref()]))?;
         Ok(())
     }
 
-    fn start_service(&self, name: impl AsRef<str>) -> anyhow::Result<()> {
+    fn start_service(&self, name: &str) -> anyhow::Result<()> {
         self.runner
             .try_run(Command::new("sudo").args(["systemctl", "start", name.as_ref()]))?;
         Ok(())

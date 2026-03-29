@@ -1,5 +1,6 @@
-use std::{fs::File, process::Command, rc::Rc, thread, time::Duration};
+use std::{fs::File, path::Path, process::Command, rc::Rc, thread, time::Duration};
 
+use anyhow::anyhow;
 use bcrypt::DEFAULT_COST;
 use log::info;
 use serde_valid::Validate;
@@ -402,7 +403,28 @@ impl<'a> OpenvairInstallerService<'a> {
     }
 
     fn process_services(&self) -> anyhow::Result<()> {
-        todo!()
+        let files_res = self.runner.try_run(Command::new("sudo").args([
+            "find",
+            &self.installer_config.project_path,
+            "-name",
+            "*.service",
+        ]))?;
+        let files = files_res.output.split_whitespace().collect::<Vec<_>>();
+
+        for file in files {
+            let fpath = Path::new(file);
+            let fbasename = fpath
+                .file_name()
+                .ok_or(anyhow!("failed to get basename from path '{}'", file))?
+                .to_str()
+                .expect("should always convert back to str because came from str");
+
+            self.services.add_service_from_file(file)?;
+            self.services.enable_service(fbasename)?;
+            self.services.start_service(fbasename)?;
+        }
+
+        Ok(())
     }
 
     fn clear_home_dir(&self) -> anyhow::Result<()> {
