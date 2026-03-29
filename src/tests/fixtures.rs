@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use rstest::{fixture, rstest};
+use rstest::fixture;
 
 use crate::{
     cmd_runner::CommandRunner, openvair_manager::python::PythonProvider,

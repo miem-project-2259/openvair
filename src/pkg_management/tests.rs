@@ -1,7 +1,7 @@
 #[cfg(feature = "ubuntu")]
-use crate::tests::fixtures::command_runner;
-
 use super::*;
+#[cfg(feature = "ubuntu")]
+use crate::tests::fixtures::command_runner;
 
 #[cfg(feature = "ubuntu")]
 #[rstest]

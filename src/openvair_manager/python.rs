@@ -32,7 +32,7 @@ impl PythonProvider {
         ]
     }
 
-    pub fn install(&self, package_name: &str) -> anyhow::Result<()> {
+    pub fn try_install(&self, package_name: &str) -> anyhow::Result<()> {
         let mut args = Self::install_args();
         args.push(package_name.to_string());
         self.runner.try_run(self.python_cmd().args(args))?;
@@ -40,7 +40,7 @@ impl PythonProvider {
         Ok(())
     }
 
-    pub fn install_requirements(&self, requirements_path: &str) -> anyhow::Result<()> {
+    pub fn try_install_requirements(&self, requirements_path: &str) -> anyhow::Result<()> {
         let mut args = Self::install_args();
         args.extend([String::from("-r"), requirements_path.to_string()]);
         self.runner.try_run(self.python_cmd().args(args))?;

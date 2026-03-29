@@ -7,6 +7,7 @@ use crate::{
     docker::{installer::UbuntuDockerInstaller, provider::DockerProvider},
     openvair_manager::{
         cli::OpenvairManagerCli,
+        files::FilesProvider,
         installer::{config::InstallerConfig, service::OpenvairInstallerService},
         node_exporter::installer::{
             UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig,
@@ -32,11 +33,12 @@ pub mod openvair_manager;
 
 fn main() -> anyhow::Result<()> {
     let runner = Rc::new(CommandRunner::new());
+    let files = Rc::new(FilesProvider::new(runner.clone()));
     let pkg = Rc::new(UbuntuPackageProvider::new(runner.clone()));
     let mut docker_installer = UbuntuDockerInstaller::new(runner.clone(), pkg.clone());
     let docker = DockerProvider::new(runner.clone());
     let mut python = PythonProvider::new(runner.clone());
-    let services = Rc::new(SystemdServiceProvider::new(runner.clone()));
+    let services = Rc::new(SystemdServiceProvider::new(runner.clone(), files.clone()));
 
     let cli = OpenvairManagerCli::parse();
     match cli.command {
@@ -60,15 +62,19 @@ fn main() -> anyhow::Result<()> {
                 UbuntuNodeExporterInstallerConfig::builder()
                     .proc(&installer_cfg.processor_type)
                     .version("test")
+                    .dependencies_file(&installer_cfg.dependencies_file)
                     .build(),
                 runner.clone(),
+                files.clone(),
+                services.clone(),
             ));
 
             let mut installer = OpenvairInstallerService::new(
                 installer_cfg,
                 project_cfg,
                 pkg,
-                &runner,
+                runner,
+                files,
                 &docker_installer,
                 &docker,
                 node_exporter_provider,

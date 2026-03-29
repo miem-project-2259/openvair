@@ -2,6 +2,7 @@ use std::{process::Command, rc::Rc};
 
 use crate::cmd_runner::CommandRunner;
 
+#[derive(Clone, Debug)]
 pub struct FilesProvider {
     runner: Rc<CommandRunner>,
 }
@@ -11,15 +12,19 @@ impl FilesProvider {
         Self { runner }
     }
 
-    pub fn remove_file(&self, path: &str) -> anyhow::Result<()> {
-        self.runner
-            .try_run(Command::new("sudo").args(["rm", path]))?;
+    pub fn remove_files(&self, paths: &[&str]) -> anyhow::Result<()> {
+        let mut args = vec!["rm"];
+        args.extend(paths);
+
+        self.runner.try_run(Command::new("sudo").args(args))?;
         Ok(())
     }
 
-    pub fn remove_dir(&self, path: &str) -> anyhow::Result<()> {
-        self.runner
-            .try_run(Command::new("sudo").args(["rm", "-rf", path]))?;
+    pub fn remove_dirs(&self, paths: &[&str]) -> anyhow::Result<()> {
+        let mut args = vec!["rm", "-rf"];
+        args.extend(paths);
+
+        self.runner.try_run(Command::new("sudo").args(args))?;
         Ok(())
     }
 

@@ -1,4 +1,4 @@
-use std::{fs::File, path::Path, process::Command, rc::Rc, thread, time::Duration};
+use std::{path::Path, process::Command, rc::Rc, thread, time::Duration};
 
 use anyhow::anyhow;
 use bcrypt::DEFAULT_COST;
@@ -12,8 +12,9 @@ use crate::{
         provider::{DockerProvider, DockerRunConfig},
     },
     openvair_manager::{
-        installer::config::InstallerConfig, node_exporter::installer::NodeExporterInstaller,
-        python::PythonProvider, services::ServiceProvider,
+        files::FilesProvider, installer::config::InstallerConfig,
+        node_exporter::installer::NodeExporterInstaller, python::PythonProvider,
+        services::ServiceProvider,
     },
     pkg_management::PackageProvider,
     project_config::OpenvairProjectConfig,
@@ -23,7 +24,8 @@ pub struct OpenvairInstallerService<'a> {
     pub installer_config: InstallerConfig,
     pub project_config: OpenvairProjectConfig,
     pkg: Rc<dyn PackageProvider>,
-    runner: &'a CommandRunner,
+    runner: Rc<CommandRunner>,
+    files: Rc<FilesProvider>,
     docker_installer: &'a dyn DockerInstaller,
     docker: &'a DockerProvider,
     node_exporter_installer: Rc<dyn NodeExporterInstaller>,
@@ -36,7 +38,8 @@ impl<'a> OpenvairInstallerService<'a> {
         installer_config: InstallerConfig,
         project_config: OpenvairProjectConfig,
         pkg: Rc<dyn PackageProvider>,
-        runner: &'a CommandRunner,
+        runner: Rc<CommandRunner>,
+        files: Rc<FilesProvider>,
         docker_installer: &'a dyn DockerInstaller,
         docker: &'a DockerProvider,
         node_exporter_installer: Rc<dyn NodeExporterInstaller>,
@@ -53,6 +56,7 @@ impl<'a> OpenvairInstallerService<'a> {
             node_exporter_installer,
             python,
             services,
+            files,
         }
     }
 
@@ -184,14 +188,14 @@ impl<'a> OpenvairInstallerService<'a> {
         info!("installing misc python packages");
         let python_pkgs = ["libvirt-python", "wheel"];
         for p in python_pkgs {
-            self.python.install(p);
+            self.python.try_install(p)?;
         }
 
         info!("installing requirements");
-        self.python.install_requirements(&format!(
+        self.python.try_install_requirements(&format!(
             "{}/requirements.txt",
             self.installer_config.project_path
-        ));
+        ))?;
         info!("install precommit");
         self.runner.try_run(
             Command::new(format!(
@@ -205,15 +209,13 @@ impl<'a> OpenvairInstallerService<'a> {
 
     fn set_repo_owner(&self) -> anyhow::Result<()> {
         info!("changing owner of the repo");
-        self.runner.try_run(Command::new("sudo").args([
-            "chown",
-            "-R",
+        self.files.chown(
             &format!(
                 "{}:{}",
                 self.installer_config.user, self.installer_config.user
             ),
-            &self.installer_config.project_path,
-        ]))?;
+            &[&self.installer_config.project_path],
+        )?;
         Ok(())
     }
 
@@ -349,15 +351,15 @@ impl<'a> OpenvairInstallerService<'a> {
 
     fn generate_certificate(&self) -> anyhow::Result<()> {
         const CERT_DURATION_DAYS: u32 = 36500;
-        let KEY_FILE: &str = &format!("{}/key.pem", self.installer_config.project_path);
-        let CERT_FILE: &str = &format!("{}/cert.pem", self.installer_config.project_path);
-        let CONFIG_FILE: &str = &format!("{}/openssl.cnf", self.installer_config.project_path);
+        let key_file: &str = &format!("{}/key.pem", self.installer_config.project_path);
+        let cert_file: &str = &format!("{}/cert.pem", self.installer_config.project_path);
+        let config_file: &str = &format!("{}/openssl.cnf", self.installer_config.project_path);
 
-        if !std::fs::exists(CONFIG_FILE)? {
-            anyhow::bail!("configuration file {} not found", CONFIG_FILE);
+        if !std::fs::exists(config_file)? {
+            anyhow::bail!("configuration file {} not found", config_file);
         }
 
-        info!("configuration file {} found", CONFIG_FILE);
+        info!("configuration file {} found", config_file);
 
         self.runner.try_run(Command::new("openssl").args([
             "req",
@@ -365,14 +367,14 @@ impl<'a> OpenvairInstallerService<'a> {
             "-newkey",
             "rsa:4096",
             "-keyout",
-            KEY_FILE,
+            key_file,
             "-out",
-            CERT_FILE,
+            cert_file,
             "-days",
             &CERT_DURATION_DAYS.to_string(),
             "-nodes",
             "-config",
-            CONFIG_FILE,
+            config_file,
         ]))?;
         Ok(())
     }
@@ -434,9 +436,8 @@ impl<'a> OpenvairInstallerService<'a> {
 
     fn clear_home_dir(&self) -> anyhow::Result<()> {
         info!("clearing home directory");
-        self.runner.try_run(
-            Command::new("sudo").args(["rm", "-rf", ".nvm", ".npm", ".cache", ".config"]),
-        )?;
+        self.files
+            .remove_dirs(&[".nvm", ".npm", ".cache", ".config"])?;
         Ok(())
     }
 

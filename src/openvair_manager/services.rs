@@ -1,21 +1,24 @@
 use std::{process::Command, rc::Rc};
 
-use crate::cmd_runner::CommandRunner;
+use crate::{cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};
 
 pub trait ServiceProvider {
     fn restart_service(&self, name: &str) -> anyhow::Result<()>;
     fn add_service_from_file(&self, file: &str) -> anyhow::Result<()>;
+    fn add_service_from_content(&self, content: &str, service_name: &str) -> anyhow::Result<()>;
     fn enable_service(&self, name: &str) -> anyhow::Result<()>;
     fn start_service(&self, name: &str) -> anyhow::Result<()>;
 }
 
+#[derive(Clone, Debug)]
 pub struct SystemdServiceProvider {
+    files: Rc<FilesProvider>,
     runner: Rc<CommandRunner>,
 }
 
 impl SystemdServiceProvider {
-    pub fn new(runner: Rc<CommandRunner>) -> Self {
-        Self { runner }
+    pub fn new(runner: Rc<CommandRunner>, files: Rc<FilesProvider>) -> Self {
+        Self { runner, files }
     }
 }
 
@@ -27,11 +30,7 @@ impl ServiceProvider for SystemdServiceProvider {
     }
 
     fn add_service_from_file(&self, file: &str) -> anyhow::Result<()> {
-        self.runner.try_run(Command::new("sudo").args([
-            "cp",
-            file.as_ref(),
-            "/etc/systemd/system",
-        ]))?;
+        self.files.cp(&[file.as_ref()], "/etc/systemd/system")?;
         Ok(())
     }
 
@@ -44,6 +43,14 @@ impl ServiceProvider for SystemdServiceProvider {
     fn start_service(&self, name: &str) -> anyhow::Result<()> {
         self.runner
             .try_run(Command::new("sudo").args(["systemctl", "start", name.as_ref()]))?;
+        Ok(())
+    }
+
+    fn add_service_from_content(&self, content: &str, service_name: &str) -> anyhow::Result<()> {
+        self.runner.try_pipe(
+            Command::new("echo").arg(content),
+            Command::new("tee").args(["tee", &format!("/etc/systemd/system/{}", service_name)]),
+        )?;
         Ok(())
     }
 }
