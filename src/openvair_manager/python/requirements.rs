@@ -13,6 +13,11 @@ impl PythonRequirements {
 
         None
     }
+
+    pub fn from_file(path: &str) -> anyhow::Result<Self> {
+        let contents = std::fs::read_to_string(path)?;
+        Ok(Self::from_str(&contents)?)
+    }
 }
 
 impl FromStr for PythonRequirements {
