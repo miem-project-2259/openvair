@@ -74,7 +74,6 @@ impl<'a> OpenvairInstallerService<'a> {
         self.process_services()?;
 
         self.clear_home_dir()?;
-        self.create_db_user()?;
         self.install_uv()?;
         self.install_documentation()?;
         self.restart_web_app_service()?;
@@ -250,7 +249,8 @@ impl<'a> OpenvairInstallerService<'a> {
         )?;
 
         // Setup default user
-        let hashed_password = bcrypt::hash(&self.project_config.default_user.password, DEFAULT_COST)?;
+        let hashed_password =
+            bcrypt::hash(&self.project_config.default_user.password, DEFAULT_COST)?;
         self.docker.try_exec(PG_CONTAINER_NAME,
             &format!(
                 "psql -U {} -d {} -c \"INSERT INTO USERS (id, username, password) VALUES ('0b677738-34ff-4f9e-b1f6-5962065c0207', '{}', NULL, 't', '{}')\"",
@@ -408,18 +408,36 @@ impl<'a> OpenvairInstallerService<'a> {
         Ok(())
     }
 
-    fn create_db_user(&self) -> anyhow::Result<()> {
-        self.docker.try_exec("postgres", command)
-
+    fn install_uv(&self) -> anyhow::Result<()> {
+        info!("installing uv");
+        self.runner.try_pipe(
+            Command::new("curl").args(["-LsSf", "https://astral.sh/uv/install.sh"]),
+            &mut Command::new("sh"),
+        )?;
         Ok(())
     }
 
-    fn install_uv(&self) -> anyhow::Result<()> {
-        todo!()
-    }
-
     fn install_documentation(&self) -> anyhow::Result<()> {
-        todo!()
+        const DOC_REPO: &str = "https://github.com/Aerodisk/openvair-docs.git";
+
+        info!("installing documentation");
+
+        if std::fs::exists(&self.installer_config.docs_project_path)? {
+            info!("dcoumentation repository already exists");
+        } else {
+            self.runner.try_run(Command::new("git").args([
+                "clone",
+                DOC_REPO,
+                &self.installer_config.docs_project_path,
+            ]))?;
+        }
+
+        self.runner.try_run(Command::new("bash").arg(format!(
+            "{}/install.sh",
+            &self.installer_config.docs_project_path
+        )))?;
+
+        Ok(())
     }
 
     fn restart_web_app_service(&self) -> anyhow::Result<()> {
