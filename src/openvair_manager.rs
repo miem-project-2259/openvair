@@ -5,3 +5,4 @@ pub mod python;
 pub mod services;
 
 pub mod files;
+pub mod git_pkg;
