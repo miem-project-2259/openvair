@@ -1,10 +1,13 @@
 use std::{process::Command, rc::Rc};
 
+use anyhow::anyhow;
+
 use crate::{
     cmd_runner::CommandRunner,
     openvair_manager::{
         files::FilesProvider,
         git_pkg::{GitPkgInfo, GitPkgInstaller, InstallManifest, ManifestRecord},
+        python::requirements::PythonRequirements,
         services::{ServiceProvider, SystemdServiceProvider},
     },
 };
@@ -114,7 +117,11 @@ fn get_node_exporter_version(runner: &CommandRunner, deps_file: &str) -> anyhow:
 
 impl NodeExporterInstaller for UbuntuNodeExporterInstaller {
     fn install_node_exporter(&self) -> anyhow::Result<()> {
-        let version = get_node_exporter_version(&self.runner, &self.config.dependencies_file)?;
+        let version = self
+            .config
+            .requirements
+            .get_version("node_exporter")
+            .ok_or(anyhow!("failed to get version for 'node_exporter'"))?;
 
         let pkg_info = GitPkgInfo::builder()
             .name("node_exporter")
@@ -138,7 +145,7 @@ impl NodeExporterInstaller for UbuntuNodeExporterInstaller {
 #[derive(Clone, Debug, Default)]
 pub struct UbuntuNodeExporterInstallerConfig {
     proc: String,
-    dependencies_file: String,
+    requirements: Rc<PythonRequirements>,
 }
 
 impl UbuntuNodeExporterInstallerConfig {
@@ -158,8 +165,8 @@ impl UbuntuNodeExporterInstallerConfigBuilder {
         self
     }
 
-    pub fn dependencies_file(mut self, value: impl ToString) -> Self {
-        self.config.dependencies_file = value.to_string();
+    pub fn requirements(mut self, value: Rc<PythonRequirements>) -> Self {
+        self.config.requirements = value;
         self
     }
 

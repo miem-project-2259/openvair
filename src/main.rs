@@ -13,7 +13,7 @@ use crate::{
         node_exporter::installer::{
             UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig,
         },
-        python::provider::PythonProvider,
+        python::{provider::PythonProvider, requirements::PythonRequirements},
         services::SystemdServiceProvider,
     },
     pkg_management::UbuntuPackageProvider,
@@ -49,6 +49,9 @@ fn main() -> anyhow::Result<()> {
                 InstallerConfig::builder().build(runner.clone(), &openvair_manager_install_args);
             let project_cfg =
                 OpenvairProjectConfig::try_from_file(&installer_cfg.project_config_file)?;
+            let third_party_requirements = Rc::new(PythonRequirements::from_file(
+                &installer_cfg.dependencies_file,
+            )?);
 
             let os_type = runner
                 .pipe(
@@ -68,7 +71,7 @@ fn main() -> anyhow::Result<()> {
             let node_exporter_provider = Rc::new(UbuntuNodeExporterInstaller::new(
                 UbuntuNodeExporterInstallerConfig::builder()
                     .proc(&installer_cfg.processor_type)
-                    .dependencies_file(&installer_cfg.dependencies_file)
+                    .requirements(third_party_requirements)
                     .build(),
                 runner.clone(),
                 files.clone(),

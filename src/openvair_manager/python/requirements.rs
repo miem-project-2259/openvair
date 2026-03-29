@@ -1,6 +1,6 @@
 use std::{ops::Deref, str::FromStr};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PythonRequirements(pub Vec<RequirementRecord>);
 
 impl PythonRequirements {
