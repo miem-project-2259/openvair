@@ -1,7 +1,6 @@
 use std::{process::Command, rc::Rc};
 
 use clap::Parser;
-use command_macros::cmd;
 
 use crate::{
     cmd_runner::CommandRunner,
@@ -9,10 +8,13 @@ use crate::{
     openvair_manager::{
         cli::OpenvairManagerCli,
         installer::{config::InstallerConfig, service::OpenvairInstallerService},
+        node_exporter::installer::{
+            UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig,
+        },
         python::PythonProvider,
         services::SystemdServiceProvider,
     },
-    pkg_management::{PackageProvider, UbuntuPackageProvider},
+    pkg_management::UbuntuPackageProvider,
     project_config::OpenvairProjectConfig,
 };
 
@@ -54,6 +56,13 @@ fn main() -> anyhow::Result<()> {
             docker_installer.set_os_type(&os_type);
             docker_installer.set_proc(&installer_cfg.processor_type);
             python.set_python_path(&format!("{}/venv/bin/python3", installer_cfg.project_path));
+            let node_exporter_provider = Rc::new(UbuntuNodeExporterInstaller::new(
+                UbuntuNodeExporterInstallerConfig::builder()
+                    .proc(&installer_cfg.processor_type)
+                    .version("test")
+                    .build(),
+                runner.clone(),
+            ));
 
             let mut installer = OpenvairInstallerService::new(
                 installer_cfg,
@@ -62,6 +71,7 @@ fn main() -> anyhow::Result<()> {
                 &runner,
                 &docker_installer,
                 &docker,
+                node_exporter_provider,
                 &python,
                 services,
             );

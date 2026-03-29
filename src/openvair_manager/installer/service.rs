@@ -12,7 +12,8 @@ use crate::{
         provider::{DockerProvider, DockerRunConfig},
     },
     openvair_manager::{
-        installer::config::InstallerConfig, python::PythonProvider, services::ServiceProvider,
+        installer::config::InstallerConfig, node_exporter::installer::NodeExporterInstaller,
+        python::PythonProvider, services::ServiceProvider,
     },
     pkg_management::PackageProvider,
     project_config::OpenvairProjectConfig,
@@ -25,6 +26,7 @@ pub struct OpenvairInstallerService<'a> {
     runner: &'a CommandRunner,
     docker_installer: &'a dyn DockerInstaller,
     docker: &'a DockerProvider,
+    node_exporter_installer: Rc<dyn NodeExporterInstaller>,
     python: &'a PythonProvider,
     services: Rc<dyn ServiceProvider>,
 }
@@ -37,6 +39,7 @@ impl<'a> OpenvairInstallerService<'a> {
         runner: &'a CommandRunner,
         docker_installer: &'a dyn DockerInstaller,
         docker: &'a DockerProvider,
+        node_exporter_installer: Rc<dyn NodeExporterInstaller>,
         python: &'a PythonProvider,
         services: Rc<dyn ServiceProvider>,
     ) -> Self {
@@ -47,6 +50,7 @@ impl<'a> OpenvairInstallerService<'a> {
             runner,
             docker_installer,
             docker,
+            node_exporter_installer,
             python,
             services,
         }
@@ -378,7 +382,8 @@ impl<'a> OpenvairInstallerService<'a> {
     }
 
     fn instrall_node_exporter(&self) -> anyhow::Result<()> {
-        todo!()
+        self.node_exporter_installer.install_node_exporter()?;
+        Ok(())
     }
 
     fn setup_novnc(&self) -> anyhow::Result<()> {
