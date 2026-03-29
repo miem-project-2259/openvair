@@ -35,7 +35,8 @@ fn main() -> anyhow::Result<()> {
     let runner = Rc::new(CommandRunner::new());
     let files = Rc::new(FilesProvider::new(runner.clone()));
     let pkg = Rc::new(UbuntuPackageProvider::new(runner.clone()));
-    let mut docker_installer = UbuntuDockerInstaller::new(runner.clone(), pkg.clone());
+    let mut docker_installer =
+        UbuntuDockerInstaller::new(runner.clone(), files.clone(), pkg.clone());
     let docker = DockerProvider::new(runner.clone());
     let mut python = PythonProvider::new(runner.clone());
     let services = Rc::new(SystemdServiceProvider::new(runner.clone(), files.clone()));
@@ -61,7 +62,6 @@ fn main() -> anyhow::Result<()> {
             let node_exporter_provider = Rc::new(UbuntuNodeExporterInstaller::new(
                 UbuntuNodeExporterInstallerConfig::builder()
                     .proc(&installer_cfg.processor_type)
-                    .version("test")
                     .dependencies_file(&installer_cfg.dependencies_file)
                     .build(),
                 runner.clone(),

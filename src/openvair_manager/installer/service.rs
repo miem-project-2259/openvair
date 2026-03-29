@@ -170,16 +170,12 @@ impl<'a> OpenvairInstallerService<'a> {
         )?;
 
         info!("exporting pythonpath");
-        self.runner.try_pipe(
-            Command::new("echo").arg(format!(
+        self.files.append(
+            &format!(
                 "'export PYTHONPATH={}:",
                 &self.installer_config.project_path
-            )),
-            Command::new("sudo").args([
-                "tee",
-                "-a",
-                &format!("{}/venv/bin/activate", &self.installer_config.project_path),
-            ]),
+            ),
+            &format!("{}/venv/bin/activate", &self.installer_config.project_path),
         )?;
         Ok(())
     }
@@ -317,15 +313,15 @@ impl<'a> OpenvairInstallerService<'a> {
             anyhow::bail!("{} file does not exist", SNMPD_CONF);
         }
 
-        self.runner.try_pipe(
-            Command::new("echo").arg("view systemonly  included    .1.3.6.1.4.1.54641"),
-            Command::new("sudo").args(["tee", "-a", SNMPD_CONF]),
+        self.files.append(
+            "
+view systemonly  included    .1.3.6.1.4.1.54641
+rocommunity public default -V systemonly
+"
+            .trim(),
+            SNMPD_CONF,
         )?;
-        self.runner.try_pipe(
-            Command::new("echo").arg("rocommunity public default -V systemonly"),
-            Command::new("sudo").args(["tee", "-a", SNMPD_CONF]),
-        )?;
-        info!("successfullyu added lines to {}", SNMPD_CONF);
+        info!("successfully added lines to {}", SNMPD_CONF);
 
         Ok(())
     }

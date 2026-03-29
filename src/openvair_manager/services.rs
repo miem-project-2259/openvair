@@ -47,10 +47,8 @@ impl ServiceProvider for SystemdServiceProvider {
     }
 
     fn add_service_from_content(&self, content: &str, service_name: &str) -> anyhow::Result<()> {
-        self.runner.try_pipe(
-            Command::new("echo").arg(content),
-            Command::new("tee").args(["tee", &format!("/etc/systemd/system/{}", service_name)]),
-        )?;
+        self.files
+            .write(content, &format!("/etc/systemd/system/{}", service_name))?;
         Ok(())
     }
 }

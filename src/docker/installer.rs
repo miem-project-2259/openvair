@@ -2,6 +2,7 @@ use std::{process::Command, rc::Rc};
 
 use crate::{
     cmd_runner::CommandRunner,
+    openvair_manager::files::FilesProvider,
     pkg_management::{PackageProvider, UbuntuPackageProvider},
 };
 
@@ -12,17 +13,23 @@ pub trait DockerInstaller {
 pub struct UbuntuDockerInstaller {
     pkg: Rc<UbuntuPackageProvider>,
     runner: Rc<CommandRunner>,
+    files: Rc<FilesProvider>,
     os_type: String,
     proc: String,
 }
 
 impl UbuntuDockerInstaller {
-    pub fn new(runner: Rc<CommandRunner>, pkg: Rc<UbuntuPackageProvider>) -> Self {
+    pub fn new(
+        runner: Rc<CommandRunner>,
+        files: Rc<FilesProvider>,
+        pkg: Rc<UbuntuPackageProvider>,
+    ) -> Self {
         Self {
             runner,
             pkg,
             os_type: String::new(),
             proc: String::new(),
+            files,
         }
     }
 
@@ -59,13 +66,13 @@ impl<'a> DockerInstaller for UbuntuDockerInstaller {
         let lsb_res = self.runner.run(Command::new("lsb_release").arg("-cs"));
         let lsb_release = lsb_res.output.trim();
 
-        self.runner.pipe(
-            Command::new("echo").args([format!(
+        self.files.write(
+            &format!(
                 "'deb [arch={}] https://download.docker.com/linux/{} {lsb_release} stable'",
                 self.proc, self.os_type
-            )]),
-            Command::new("sudo").args(["tee", "/etc/apt/sources.list.d/docker.list"]),
-        );
+            ),
+            "/etc/apt/sources.list.d/docker.list",
+        )?;
 
         self.runner
             .run(Command::new("sudo").args(["apt-get", "update"]));
