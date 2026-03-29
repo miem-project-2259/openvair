@@ -13,7 +13,7 @@ use crate::{
         node_exporter::installer::{
             UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig,
         },
-        python::PythonProvider,
+        python::provider::PythonProvider,
         services::SystemdServiceProvider,
     },
     pkg_management::UbuntuPackageProvider,

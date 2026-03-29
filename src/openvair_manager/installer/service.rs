@@ -13,7 +13,7 @@ use crate::{
     },
     openvair_manager::{
         files::FilesProvider, installer::config::InstallerConfig,
-        node_exporter::installer::NodeExporterInstaller, python::PythonProvider,
+        node_exporter::installer::NodeExporterInstaller, python::provider::PythonProvider,
         services::ServiceProvider,
     },
     pkg_management::PackageProvider,
