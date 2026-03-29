@@ -51,4 +51,20 @@ impl FilesProvider {
         self.runner.try_run(Command::new("sudo").args(args))?;
         Ok(())
     }
+
+    pub fn write(&self, content: &str, path: &str) -> anyhow::Result<()> {
+        self.runner.try_pipe(
+            Command::new("echo").arg(content),
+            Command::new("sudo").args(["tee", path]),
+        )?;
+        Ok(())
+    }
+
+    pub fn append(&self, content: &str, path: &str) -> anyhow::Result<()> {
+        self.runner.try_pipe(
+            Command::new("echo").arg(content),
+            Command::new("sudo").args(["tee", "-a", path]),
+        )?;
+        Ok(())
+    }
 }
