@@ -13,7 +13,8 @@ use crate::{
     },
     openvair_manager::{
         files::FilesProvider, installer::config::InstallerConfig,
-        node_exporter::installer::NodeExporterInstaller, python::provider::PythonProvider,
+        node_exporter::installer::NodeExporterInstaller,
+        prometheus::installer::PrometheusInstaller, python::provider::PythonProvider,
         services::ServiceProvider,
     },
     pkg_management::PackageProvider,
@@ -28,6 +29,7 @@ pub struct OpenvairInstallerService<'a> {
     files: Rc<FilesProvider>,
     docker_installer: &'a dyn DockerInstaller,
     docker: &'a DockerProvider,
+    prometheus_installer: Rc<dyn PrometheusInstaller>,
     node_exporter_installer: Rc<dyn NodeExporterInstaller>,
     python: &'a PythonProvider,
     services: Rc<dyn ServiceProvider>,
@@ -42,6 +44,7 @@ impl<'a> OpenvairInstallerService<'a> {
         files: Rc<FilesProvider>,
         docker_installer: &'a dyn DockerInstaller,
         docker: &'a DockerProvider,
+        prometheus_installer: Rc<dyn PrometheusInstaller>,
         node_exporter_installer: Rc<dyn NodeExporterInstaller>,
         python: &'a PythonProvider,
         services: Rc<dyn ServiceProvider>,
@@ -57,6 +60,7 @@ impl<'a> OpenvairInstallerService<'a> {
             python,
             services,
             files,
+            prometheus_installer,
         }
     }
 
@@ -376,7 +380,8 @@ rocommunity public default -V systemonly
     }
 
     fn install_prometheus(&self) -> anyhow::Result<()> {
-        todo!()
+        self.prometheus_installer.install_prometheus()?;
+        Ok(())
     }
 
     fn install_node_exporter(&self) -> anyhow::Result<()> {

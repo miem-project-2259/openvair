@@ -13,6 +13,7 @@ use crate::{
         node_exporter::installer::{
             UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig,
         },
+        prometheus::installer::{UbuntuPrometheusInstaller, UbuntuPrometheusInstallerConfig},
         python::{provider::PythonProvider, requirements::PythonRequirements},
         services::SystemdServiceProvider,
     },
@@ -68,7 +69,22 @@ fn main() -> anyhow::Result<()> {
                 runner.clone(),
                 files.clone(),
             ));
-            let node_exporter_provider = Rc::new(UbuntuNodeExporterInstaller::new(
+            let prometheus_installer = Rc::new(UbuntuPrometheusInstaller::new(
+                runner.clone(),
+                files.clone(),
+                services.clone(),
+                git_pkg.clone(),
+                UbuntuPrometheusInstallerConfig::new(
+                    installer_cfg.processor_type.clone(),
+                    installer_cfg.user.clone(),
+                    third_party_requirements.clone(),
+                    vec![
+                        format!("{}/cert.pem", installer_cfg.project_path),
+                        format!("{}/key.pem", installer_cfg.project_path),
+                    ],
+                ),
+            ));
+            let node_exporter_installer = Rc::new(UbuntuNodeExporterInstaller::new(
                 UbuntuNodeExporterInstallerConfig::builder()
                     .proc(&installer_cfg.processor_type)
                     .requirements(third_party_requirements)
@@ -87,7 +103,8 @@ fn main() -> anyhow::Result<()> {
                 files,
                 &docker_installer,
                 &docker,
-                node_exporter_provider,
+                prometheus_installer,
+                node_exporter_installer,
                 &python,
                 services,
             );
