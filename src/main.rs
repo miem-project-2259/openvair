@@ -10,6 +10,7 @@ use crate::{
         cli::OpenvairManagerCli,
         installer::{config::InstallerConfig, service::OpenvairInstallerService},
         python::PythonProvider,
+        services::SystemdServiceProvider,
     },
     pkg_management::{PackageProvider, UbuntuPackageProvider},
     project_config::OpenvairProjectConfig,
@@ -33,6 +34,7 @@ fn main() -> anyhow::Result<()> {
     let mut docker_installer = UbuntuDockerInstaller::new(runner.clone(), pkg.clone());
     let docker = DockerProvider::new(runner.clone());
     let mut python = PythonProvider::new(runner.clone());
+    let services = Rc::new(SystemdServiceProvider::new(runner.clone()));
 
     let cli = OpenvairManagerCli::parse();
     match cli.command {
@@ -61,6 +63,7 @@ fn main() -> anyhow::Result<()> {
                 &docker_installer,
                 &docker,
                 &python,
+                services,
             );
 
             installer.install_openvair()?;

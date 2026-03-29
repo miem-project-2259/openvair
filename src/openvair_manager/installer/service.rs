@@ -10,7 +10,9 @@ use crate::{
         installer::DockerInstaller,
         provider::{DockerProvider, DockerRunConfig},
     },
-    openvair_manager::{installer::config::InstallerConfig, python::PythonProvider},
+    openvair_manager::{
+        installer::config::InstallerConfig, python::PythonProvider, services::ServiceProvider,
+    },
     pkg_management::PackageProvider,
     project_config::OpenvairProjectConfig,
 };
@@ -23,6 +25,7 @@ pub struct OpenvairInstallerService<'a> {
     docker_installer: &'a dyn DockerInstaller,
     docker: &'a DockerProvider,
     python: &'a PythonProvider,
+    services: Rc<dyn ServiceProvider>,
 }
 
 impl<'a> OpenvairInstallerService<'a> {
@@ -34,6 +37,7 @@ impl<'a> OpenvairInstallerService<'a> {
         docker_installer: &'a dyn DockerInstaller,
         docker: &'a DockerProvider,
         python: &'a PythonProvider,
+        services: Rc<dyn ServiceProvider>,
     ) -> Self {
         Self {
             installer_config,
@@ -43,6 +47,7 @@ impl<'a> OpenvairInstallerService<'a> {
             docker_installer,
             docker,
             python,
+            services,
         }
     }
 
@@ -441,7 +446,8 @@ impl<'a> OpenvairInstallerService<'a> {
     }
 
     fn restart_web_app_service(&self) -> anyhow::Result<()> {
-        todo!()
+        self.services.restart_service("web-app.service")?;
+        Ok(())
     }
 
     fn save_project_config(&self) -> anyhow::Result<()> {

@@ -3,10 +3,10 @@ use std::{process::Command, rc::Rc};
 use crate::cmd_runner::CommandRunner;
 
 pub trait ServiceProvider {
-    fn restart_service(&self, name: impl AsRef<str>) -> anyhow::Result<()>;
-    fn add_service_from_file(&self, file: impl AsRef<str>) -> anyhow::Result<()>;
-    fn enable_service(&self, name: impl AsRef<str>) -> anyhow::Result<()>;
-    fn start_service(&self, name: impl AsRef<str>) -> anyhow::Result<()>;
+    fn restart_service(&self, name: &str) -> anyhow::Result<()>;
+    fn add_service_from_file(&self, file: &str) -> anyhow::Result<()>;
+    fn enable_service(&self, name: &str) -> anyhow::Result<()>;
+    fn start_service(&self, name: &str) -> anyhow::Result<()>;
 }
 
 pub struct SystemdServiceProvider {
