@@ -44,10 +44,6 @@ impl GitPkgInstaller {
 
         self.download_url(&url)?;
         self.unzip_arch(&format!("{}.tar.gz", info.name))?;
-        for bin in &info.target_binaries {
-            self.files
-                .mv(&format!("{product}/{bin}"), "/usr/local/bin")?;
-        }
 
         for record in info.manifest.iter() {
             let ManifestRecord {
@@ -73,7 +69,6 @@ pub struct GitPkgInfo {
     pub name: String,
     pub owner: String,
     pub version: String,
-    pub target_binaries: Vec<String>,
     pub manifest: InstallManifest,
 }
 
@@ -114,15 +109,10 @@ impl GitPkgInfoBuilder {
         self.info.manifest = value;
         self
     }
-
-    pub fn target_binaries(mut self, value: &[&str]) -> Self {
-        self.info.target_binaries = Vec::from_iter(value.iter().map(ToString::to_string));
-        self
-    }
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct InstallManifest(Vec<ManifestRecord>);
+pub struct InstallManifest(pub Vec<ManifestRecord>);
 
 impl Deref for InstallManifest {
     type Target = Vec<ManifestRecord>;

@@ -4,6 +4,7 @@ use crate::{
     cmd_runner::CommandRunner,
     openvair_manager::{
         files::FilesProvider,
+        git_pkg::{GitPkgInfo, GitPkgInstaller, InstallManifest, ManifestRecord},
         services::{ServiceProvider, SystemdServiceProvider},
     },
 };
@@ -16,6 +17,7 @@ pub trait NodeExporterInstaller {
 pub struct UbuntuNodeExporterInstaller {
     runner: Rc<CommandRunner>,
     files: Rc<FilesProvider>,
+    git_pkg: Rc<GitPkgInstaller>,
     services: Rc<SystemdServiceProvider>,
     config: UbuntuNodeExporterInstallerConfig,
 }
@@ -112,8 +114,19 @@ fn get_node_exporter_version(runner: &CommandRunner, deps_file: &str) -> anyhow:
 
 impl NodeExporterInstaller for UbuntuNodeExporterInstaller {
     fn install_node_exporter(&self) -> anyhow::Result<()> {
-        let node_exporter_s = "node_exporter";
         let version = get_node_exporter_version(&self.runner, &self.config.dependencies_file)?;
+
+        let pkg_info = GitPkgInfo::builder()
+            .name("node_exporter")
+            .owner("prometheus")
+            .version(&version)
+            .manifest(InstallManifest(vec![ManifestRecord::new(
+                "/usr/local/bin",
+                ["node_exporter"],
+            )]))
+            .build();
+
+        self.git_pkg.download_package(&pkg_info)?;
 
         self.install_node_exporter_bin(&version)?;
         self.setup_services()?;
@@ -160,6 +173,7 @@ impl UbuntuNodeExporterInstaller {
         config: UbuntuNodeExporterInstallerConfig,
         runner: Rc<CommandRunner>,
         files: Rc<FilesProvider>,
+        git_pkg: Rc<GitPkgInstaller>,
         services: Rc<SystemdServiceProvider>,
     ) -> Self {
         Self {
@@ -167,6 +181,7 @@ impl UbuntuNodeExporterInstaller {
             config,
             files,
             services,
+            git_pkg,
         }
     }
 }
