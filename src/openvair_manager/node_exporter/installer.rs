@@ -20,40 +20,33 @@ pub struct UbuntuNodeExporterInstaller {
     config: UbuntuNodeExporterInstallerConfig,
 }
 
-impl NodeExporterInstaller for UbuntuNodeExporterInstaller {
-    fn install_node_exporter(&self) -> anyhow::Result<()> {
-        let node_exporter_s = "node_exporter";
-        let version = self
-            .runner
-            .try_pipe(
-                Command::new("grep").args([
-                    &format!("^{node_exporter_s}=="),
-                    &self.config.dependencies_file,
-                ]),
-                Command::new("sed").arg(format!("s/^{node_exporter_s}==//")),
-            )?
-            .output;
+impl UbuntuNodeExporterInstaller {
+    fn configure_prometheus(&self) -> anyhow::Result<()> {
+        self.files.append(
+            r#"
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+                    "#
+            .trim(),
+            "/etc/prometheus/prometheus.yml",
+        )?;
+        self.runner.try_run(Command::new("promtool").args([
+            "check",
+            "config",
+            "/etc/prometheus/prometheus.yml",
+        ]))?;
+        // Restart prometheus
+        self.runner.try_run(Command::new("curl").args([
+            "-X",
+            "POST",
+            "https://localhost:9090/-/reload",
+            "--insecure",
+        ]))?;
+        Ok(())
+    }
 
-        let product = format!("{node_exporter_s}-{version}.linux-{}", &self.config.proc);
-
-        let target_file = format!("{product}.tar.gz");
-        let target_url = format!(
-            "https://github.com/prometheus/{node_exporter_s}/releases/download/v${version}/{target_file}",
-        );
-
-        // Download node_exporter
-        self.runner
-            .try_run(Command::new("curl").args(["-LO", &target_url]))?;
-        self.runner
-            .try_run(Command::new("sudo").args(["tar", "-xf", &target_file]))?;
-        self.files
-            .mv(&format!("{product}/{node_exporter_s}"), "/usr/local/bin")?;
-
-        // Cleanup
-        self.files.remove_files(&[&target_file])?;
-        self.files.remove_dirs(&[&product])?;
-
-        // Setup service
+    fn setup_services(&self) -> anyhow::Result<()> {
         self.services.add_service_from_content(
             "
 [Unit]
@@ -81,29 +74,50 @@ WantedBy=multi-user.target
         )?;
         self.services.enable_service("node_exporter.service")?;
         self.services.start_service("node_exporter.service")?;
+        Ok(())
+    }
 
-        // Configure prometheus
-        self.files.append(
-            r#"
-  - job_name: "node_exporter"
-    static_configs:
-      - targets: ["localhost:9100"]
-                    "#
-            .trim(),
-            "/etc/prometheus/prometheus.yml",
-        )?;
-        self.runner.try_run(Command::new("promtool").args([
-            "check",
-            "config",
-            "/etc/prometheus/prometheus.yml",
-        ]))?;
-        // Restart prometheus
-        self.runner.try_run(Command::new("curl").args([
-            "-X",
-            "POST",
-            "https://localhost:9090/-/reload",
-            "--insecure",
-        ]))?;
+    fn install_node_exporter_bin(&self, version: &str) -> anyhow::Result<()> {
+        let product = format!("node_exporter-{version}.linux-{}", &self.config.proc);
+        let target_file = format!("{product}.tar.gz");
+        let target_url = format!(
+            "https://github.com/prometheus/node_exporter/releases/download/v${version}/{target_file}",
+        );
+
+        // Download node_exporter
+        self.runner
+            .try_run(Command::new("curl").args(["-LO", &target_url]))?;
+        self.runner
+            .try_run(Command::new("sudo").args(["tar", "-xf", &target_file]))?;
+        self.files
+            .mv(&format!("{product}/node_exporter"), "/usr/local/bin")?;
+
+        // Cleanup
+        self.files.remove_files(&[&target_file])?;
+        self.files.remove_dirs(&[&product])?;
+        Ok(())
+    }
+}
+
+fn get_node_exporter_version(runner: &CommandRunner, deps_file: &str) -> anyhow::Result<String> {
+    let res = runner
+        .try_pipe(
+            Command::new("grep").args([&format!("^node_exporter=="), deps_file]),
+            Command::new("sed").arg(format!("s/^node_exporter==//")),
+        )?
+        .output;
+
+    Ok(res)
+}
+
+impl NodeExporterInstaller for UbuntuNodeExporterInstaller {
+    fn install_node_exporter(&self) -> anyhow::Result<()> {
+        let node_exporter_s = "node_exporter";
+        let version = get_node_exporter_version(&self.runner, &self.config.dependencies_file)?;
+
+        self.install_node_exporter_bin(&version)?;
+        self.setup_services()?;
+        self.configure_prometheus()?;
         Ok(())
     }
 }

@@ -81,7 +81,7 @@ impl<'a> OpenvairInstallerService<'a> {
         self.generate_certificate()?;
 
         self.install_prometheus()?;
-        self.instrall_node_exporter()?;
+        self.install_node_exporter()?;
 
         self.setup_novnc()?;
         self.setup_restic()?;
@@ -379,7 +379,7 @@ rocommunity public default -V systemonly
         todo!()
     }
 
-    fn instrall_node_exporter(&self) -> anyhow::Result<()> {
+    fn install_node_exporter(&self) -> anyhow::Result<()> {
         self.node_exporter_installer.install_node_exporter()?;
         Ok(())
     }
