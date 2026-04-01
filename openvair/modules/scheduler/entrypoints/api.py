@@ -58,12 +58,8 @@ async def get_jobs(
     crud: SchedulerCrud = Depends(SchedulerCrud),
     params: Params = Depends(),
 ) -> BaseResponse[Page[JobResponse]]:
-    """Retrieve a paginated list of jobs.
+    """Retrieve a paginated list of all scheduled jobs.
 
-    Args:
-        crud (SchedulerCrud): Dependency-injected service for handling scheduler
-            logic.
-        params (Params): Dependency-injected for pagination params
     Returns:
         BaseResponse[Page[JobResponse]]: Paginated response containing jobs.
     """
@@ -87,17 +83,12 @@ async def get_job(
     job_id: UUID,
     crud: SchedulerCrud = Depends(SchedulerCrud),
 ) -> BaseResponse[JobResponse]:
-    """Retrieve a specific job by its ID.
-
-    Args:
-        job_id (UUID): The ID of the job to retrieve.
-        crud (SchedulerCrud): Dependency-injected service for handling job
-            logic.
+    """Retrieve details of a specific scheduled job by its ID.
 
     Returns:
-        BaseResponse[JobResponse]: The retrieved job.
+        BaseResponse[JobResponse]: The retrieved job data.
     """
-    LOG.info(f'Api handle request on getting template: {job_id}')
+    LOG.info(f'Api handle request on getting job: {job_id}')
 
     job = await run_in_threadpool(crud.get_job, job_id)
 
@@ -117,15 +108,10 @@ async def create_job(
     data: RequestCreateJob,
     crud: SchedulerCrud = Depends(SchedulerCrud),
 ) -> BaseResponse:
-    """Create a new template.
-
-    Args:
-        data (RequestCreateJob): Job creation payload.
-        crud (SchedulerCrud): Dependency-injected service for handling scheduler
-            logic.
+    """Create a new scheduled job and sync it with the OS crontab.
 
     Returns:
-        BaseResponse[JobResponse]: The created job.
+        BaseResponse[JobResponse]: The newly created job data.
     """
     LOG.info('Api handle request on creating job')
 
@@ -145,16 +131,10 @@ async def edit_job(
     data: RequestUpdateJob,
     crud: SchedulerCrud = Depends(SchedulerCrud),
 ) -> BaseResponse:
-    """Update an existing job.
-
-    Args:
-        job_id (UUID): The ID of the job to update.
-        data (RequestUpdateJob): Fields to update in the job.
-        crud (SchedulerCrud): Dependency-injected service for handling scheduler
-            logic.
+    """Update an existing scheduled job's parameters.
 
     Returns:
-        BaseResponse[JobResponse]: The updated job.
+        BaseResponse[JobResponse]: The updated job data.
     """
     LOG.info(f'Api handle request on editing job {job_id}')
 
@@ -176,15 +156,10 @@ async def delete_job(
     job_id: UUID,
     crud: SchedulerCrud = Depends(SchedulerCrud),
 ) -> BaseResponse:
-    """Delete a job by ID.
-
-    Args:
-        job_id (UUID): The ID of the job to delete.
-        crud (SchedulerCrud): Dependency-injected service for handling scheduler
-            logic.
+    """Delete a scheduled job from the database and OS crontab by its ID.
 
     Returns:
-        BaseResponse[JobResponse]: The deleted job.
+        BaseResponse[JobResponse]: Data of the deleted job.
     """
     LOG.info(f'Api handle request on deleting job {job_id}')
 
