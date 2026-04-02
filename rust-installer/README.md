@@ -16,6 +16,12 @@ openvair-manager install -u aero
 cargo test
 ```
 
+# Documentation
+
+```shell
+cargo doc
+```
+
 ## Testing for a specific distribution example
 
 Different distributions should be hidden by the corresponding
@@ -23,5 +29,5 @@ feature flag. If you with to test some code for a particular
 distribution -- run the test as so
 
 ```shell
-cargo test -f ubuntu
+cargo test -F ubuntu
 ```
