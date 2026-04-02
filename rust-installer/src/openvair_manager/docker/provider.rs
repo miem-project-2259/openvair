@@ -1,6 +1,6 @@
 use std::{process::Command, rc::Rc};
 
-use crate::cmd_runner::{CommandResult, CommandRunner};
+use crate::openvair_manager::cmd_runner::{CommandResult, CommandRunner};
 
 pub struct DockerProvider {
     pub runner: Rc<CommandRunner>,

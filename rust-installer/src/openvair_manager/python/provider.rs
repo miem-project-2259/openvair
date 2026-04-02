@@ -1,6 +1,6 @@
 use std::{process::Command, rc::Rc};
 
-use crate::cmd_runner::CommandRunner;
+use crate::openvair_manager::cmd_runner::CommandRunner;
 
 #[derive(Clone, Debug)]
 pub struct PythonProvider {

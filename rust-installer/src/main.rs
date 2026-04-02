@@ -3,8 +3,10 @@ use std::{process::Command, rc::Rc};
 use clap::Parser;
 
 use crate::{
-    cmd_runner::CommandRunner,
-    docker::{installer::UbuntuDockerInstaller, provider::DockerProvider},
+    openvair_manager::cmd_runner::CommandRunner,
+    openvair_manager::docker::{installer::UbuntuDockerInstaller, provider::DockerProvider},
+    openvair_manager::pkg_management::UbuntuPackageProvider,
+    openvair_manager::project_config::OpenvairProjectConfig,
     openvair_manager::{
         cli::OpenvairManagerCli,
         files::FilesProvider,
@@ -17,19 +19,9 @@ use crate::{
         python::{provider::PythonProvider, requirements::PythonRequirements},
         services::SystemdServiceProvider,
     },
-    pkg_management::UbuntuPackageProvider,
-    project_config::OpenvairProjectConfig,
 };
 
 mod tests;
-
-pub mod cmd_runner;
-
-pub mod pkg_management;
-
-pub mod project_config;
-
-pub mod docker;
 
 pub mod openvair_manager;
 

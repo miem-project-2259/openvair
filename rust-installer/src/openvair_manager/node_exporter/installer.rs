@@ -3,7 +3,7 @@ use std::{process::Command, rc::Rc};
 use anyhow::anyhow;
 
 use crate::{
-    cmd_runner::CommandRunner,
+    openvair_manager::cmd_runner::CommandRunner,
     openvair_manager::{
         files::FilesProvider,
         git_pkg::{GitPkgInfo, GitPkgInstaller, InstallManifest, ManifestRecord},

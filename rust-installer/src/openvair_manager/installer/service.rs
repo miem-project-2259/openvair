@@ -6,19 +6,19 @@ use log::info;
 use serde_valid::Validate;
 
 use crate::{
-    cmd_runner::CommandRunner,
-    docker::{
+    openvair_manager::cmd_runner::CommandRunner,
+    openvair_manager::docker::{
         installer::DockerInstaller,
         provider::{DockerProvider, DockerRunConfig},
     },
+    openvair_manager::pkg_management::PackageProvider,
+    openvair_manager::project_config::OpenvairProjectConfig,
     openvair_manager::{
         files::FilesProvider, installer::config::InstallerConfig,
         node_exporter::installer::NodeExporterInstaller,
         prometheus::installer::PrometheusInstaller, python::provider::PythonProvider,
         services::ServiceProvider,
     },
-    pkg_management::PackageProvider,
-    project_config::OpenvairProjectConfig,
 };
 
 pub struct OpenvairInstallerService<'a> {

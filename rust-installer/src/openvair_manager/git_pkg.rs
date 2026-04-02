@@ -1,6 +1,6 @@
 use std::{ops::Deref, process::Command, rc::Rc};
 
-use crate::{cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};
+use crate::{openvair_manager::cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};
 
 #[derive(Clone, Debug)]
 pub struct GitPkgInstaller {

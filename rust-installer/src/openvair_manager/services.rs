@@ -1,6 +1,6 @@
 use std::{process::Command, rc::Rc};
 
-use crate::{cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};
+use crate::{openvair_manager::cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};
 
 pub trait ServiceProvider {
     fn restart_service(&self, name: &str) -> anyhow::Result<()>;

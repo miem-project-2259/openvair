@@ -1,9 +1,9 @@
 use std::{process::Command, rc::Rc};
 
 use crate::{
-    cmd_runner::CommandRunner,
+    openvair_manager::cmd_runner::CommandRunner,
     openvair_manager::files::FilesProvider,
-    pkg_management::{PackageProvider, UbuntuPackageProvider},
+    openvair_manager::pkg_management::{PackageProvider, UbuntuPackageProvider},
 };
 
 pub trait DockerInstaller {

@@ -158,7 +158,7 @@ pub struct BackupResticConfig {
 mod tests {
     use serde_valid::Validate;
 
-    use crate::project_config::OpenvairProjectConfig;
+    use crate::openvair_manager::project_config::OpenvairProjectConfig;
 
     #[test]
     fn test_config_read() {

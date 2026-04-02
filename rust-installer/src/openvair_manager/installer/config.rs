@@ -2,7 +2,9 @@ use std::{process::Command, rc::Rc};
 
 use log::info;
 
-use crate::{cmd_runner::CommandRunner, openvair_manager::cli::OpenvairManagerInstallArgs};
+use crate::{
+    openvair_manager::cli::OpenvairManagerInstallArgs, openvair_manager::cmd_runner::CommandRunner,
+};
 
 #[derive(Default, Clone, Debug)]
 pub struct InstallerConfig {
