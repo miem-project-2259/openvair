@@ -155,7 +155,6 @@ WantedBy=multi-user.target
         }
 
         pub struct UbuntuPrometheusInstallerConfig {
-            proc: String,
             requirements: Rc<PythonRequirements>,
             cert_paths: Vec<String>,
             user: String,
@@ -163,13 +162,11 @@ WantedBy=multi-user.target
 
         impl UbuntuPrometheusInstallerConfig {
             pub fn new(
-                proc: String,
                 user: String,
                 requirements: Rc<PythonRequirements>,
                 cert_paths: Vec<String>,
             ) -> Self {
                 Self {
-                    proc,
                     requirements,
                     cert_paths,
                     user,

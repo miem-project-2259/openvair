@@ -75,7 +75,6 @@ fn main() -> anyhow::Result<()> {
                 services.clone(),
                 git_pkg.clone(),
                 UbuntuPrometheusInstallerConfig::new(
-                    installer_cfg.processor_type.clone(),
                     installer_cfg.user.clone(),
                     third_party_requirements.clone(),
                     vec![

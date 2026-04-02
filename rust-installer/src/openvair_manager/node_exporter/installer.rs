@@ -104,17 +104,6 @@ WantedBy=multi-user.target
     }
 }
 
-fn get_node_exporter_version(runner: &CommandRunner, deps_file: &str) -> anyhow::Result<String> {
-    let res = runner
-        .try_pipe(
-            Command::new("grep").args([&format!("^node_exporter=="), deps_file]),
-            Command::new("sed").arg(format!("s/^node_exporter==//")),
-        )?
-        .output;
-
-    Ok(res)
-}
-
 impl NodeExporterInstaller for UbuntuNodeExporterInstaller {
     fn install_node_exporter(&self) -> anyhow::Result<()> {
         let version = self
