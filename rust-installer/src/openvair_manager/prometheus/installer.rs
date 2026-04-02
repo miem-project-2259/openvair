@@ -6,7 +6,7 @@ use crate::{
     openvair_manager::cmd_runner::CommandRunner,
     openvair_manager::{
         files::FilesProvider,
-        git_pkg::{GitPkgInfo, GitPkgInstaller, ManifestRecord},
+        github_pkg_management::{GitPkgInfo, GitPkgInstaller, ManifestRecord},
         python::requirements::PythonRequirements,
         services::{ServiceProvider, SystemdServiceProvider},
     },
@@ -81,13 +81,15 @@ impl UbuntuPrometheusInstaller {
             .name("prometheus")
             .owner("prometheus")
             .version(version)
-            .manifest(crate::openvair_manager::git_pkg::InstallManifest(vec![
-                ManifestRecord::new("/usr/local/bin", ["prometheus", "promtool"]),
-                ManifestRecord::new(
-                    "/etc/prometheus",
-                    ["consoles", "console_libraries", "prometheus.yml"],
-                ),
-            ]))
+            .manifest(
+                crate::openvair_manager::github_pkg_management::InstallManifest(vec![
+                    ManifestRecord::new("/usr/local/bin", ["prometheus", "promtool"]),
+                    ManifestRecord::new(
+                        "/etc/prometheus",
+                        ["consoles", "console_libraries", "prometheus.yml"],
+                    ),
+                ]),
+            )
             .build();
 
         self.git_pkg.download_package(&pkg_info)?;

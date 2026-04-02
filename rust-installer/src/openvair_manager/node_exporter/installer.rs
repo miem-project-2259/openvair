@@ -6,7 +6,7 @@ use crate::{
     openvair_manager::cmd_runner::CommandRunner,
     openvair_manager::{
         files::FilesProvider,
-        git_pkg::{GitPkgInfo, GitPkgInstaller, InstallManifest, ManifestRecord},
+        github_pkg_management::{GitPkgInfo, GitPkgInstaller, InstallManifest, ManifestRecord},
         python::requirements::PythonRequirements,
         services::{ServiceProvider, SystemdServiceProvider},
     },

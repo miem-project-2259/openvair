@@ -30,11 +30,11 @@ use crate::{
     openvair_manager::{
         cli::OpenvairManagerCli,
         files::FilesProvider,
-        git_pkg::{GitPkgInstaller, GitPkgInstallerConfig},
-        installer::{config::InstallerConfig, service::OpenvairInstallerService},
+        github_pkg_management::{GitPkgInstaller, GitPkgInstallerConfig},
         node_exporter::installer::{
             UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig,
         },
+        openvair_installer::{config::InstallerConfig, service::OpenvairInstallerService},
         prometheus::installer::{UbuntuPrometheusInstaller, UbuntuPrometheusInstallerConfig},
         python::{provider::PythonProvider, requirements::PythonRequirements},
         services::SystemdServiceProvider,
