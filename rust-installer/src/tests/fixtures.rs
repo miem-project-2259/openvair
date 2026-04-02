@@ -1,3 +1,4 @@
+///! Фикстуры для тестов
 use std::rc::Rc;
 
 use rstest::fixture;

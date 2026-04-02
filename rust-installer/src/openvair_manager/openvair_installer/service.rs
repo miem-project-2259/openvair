@@ -21,7 +21,7 @@ use crate::openvair_manager::{
     project_config::OpenvairProjectConfig,
     prometheus::installer::PrometheusInstaller,
     python::provider::PythonProvider,
-    services::ServiceProvider,
+    os_services::ServiceProvider,
 };
 
 pub struct OpenvairInstaller<'a> {

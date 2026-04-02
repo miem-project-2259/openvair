@@ -1,3 +1,4 @@
+///! Модуль работы с Python
 use std::{process::Command, rc::Rc};
 
 use crate::openvair_manager::cmd_runner::CommandRunner;

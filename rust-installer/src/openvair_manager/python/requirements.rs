@@ -1,3 +1,4 @@
+///! Модуль работы с файлами requirements.txt для Python
 use std::{ops::Deref, str::FromStr};
 
 #[derive(Clone, Debug, Default)]
@@ -96,11 +97,8 @@ mod tests {
 
     #[test]
     fn test_deserialize_requirements() -> anyhow::Result<()> {
-        let s = "
-foo==1.0.1
-bar==2.3.1
-"
-        .trim();
+        let s = "foo==1.0.1\n\
+                       bar==2.3.1";
         let r = PythonRequirements::from_str(s)?;
         assert_eq!(r.len(), 2);
         assert!(r.contains(&RequirementRecord {
@@ -116,11 +114,8 @@ bar==2.3.1
 
     #[test]
     fn test_requirements_get_version() -> anyhow::Result<()> {
-        let s = "
-foo==1.0.1
-bar==2.3.1
-"
-        .trim();
+        let s = "foo==1.0.1\n\
+                       bar==2.3.1";
         let r = PythonRequirements::from_str(s)?;
         assert_eq!(r.get_version("foo"), Some("1.0.1".into()));
         Ok(())

@@ -1,3 +1,4 @@
+///! Модуль работы с сервисами ОС
 use std::{process::Command, rc::Rc};
 
 use crate::{openvair_manager::cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};

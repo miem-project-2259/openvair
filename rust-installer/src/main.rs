@@ -29,6 +29,7 @@ use crate::openvair_manager::{
     files::FilesProvider,
     node_exporter::installer::{UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig},
     openvair_installer::{config::OpenvairInstallerConfig, service::OpenvairInstaller},
+    os_services::SystemdServiceProvider,
     pkg_management::{
         distro::ubuntu::UbuntuPackageProvider,
         github::{GithubPkgInstaller, GithubPkgInstallerConfig},
@@ -36,7 +37,6 @@ use crate::openvair_manager::{
     project_config::OpenvairProjectConfig,
     prometheus::installer::{UbuntuPrometheusInstaller, UbuntuPrometheusInstallerConfig},
     python::{provider::PythonProvider, requirements::PythonRequirements},
-    services::SystemdServiceProvider,
 };
 
 mod tests;

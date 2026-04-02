@@ -10,7 +10,7 @@ use crate::openvair_manager::{
     files::FilesProvider,
     pkg_management::github::{GithubPkgInfo, GithubPkgInstaller, InstallManifest, ManifestRecord},
     python::requirements::PythonRequirements,
-    services::{ServiceProvider, SystemdServiceProvider},
+    os_services::{ServiceProvider, SystemdServiceProvider},
 };
 
 pub trait NodeExporterInstaller {
