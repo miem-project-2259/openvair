@@ -1,3 +1,7 @@
+///! Модуль openvair_manager
+///!
+///! Данный модуль предназначен для инкапсуляции вспомогательных модулей,
+///! использующихся в программе
 pub mod cli;
 pub mod installer;
 pub mod node_exporter;

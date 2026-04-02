@@ -1,3 +1,7 @@
+///! Модуль работы с Docker
+///!
+///! Данный модуль предоставляет провайдер для работы с Docker,
+///! в основном через shell.
 use std::{process::Command, rc::Rc};
 
 use crate::openvair_manager::cmd_runner::{CommandResult, CommandRunner};

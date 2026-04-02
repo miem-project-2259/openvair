@@ -1,3 +1,7 @@
+///! Модуль установки пакетов с Github
+///!
+///! Данный модуль предоставляет интерфейс для установки пакетов с github
+///! по версии, имени, владельцу и целевой архитектуре
 use std::{ops::Deref, process::Command, rc::Rc};
 
 use crate::{openvair_manager::cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};
