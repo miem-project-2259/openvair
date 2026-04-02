@@ -2,14 +2,12 @@ use std::{process::Command, rc::Rc};
 
 use anyhow::anyhow;
 
-use crate::{
-    openvair_manager::cmd_runner::CommandRunner,
-    openvair_manager::{
-        files::FilesProvider,
-        github_pkg_management::{GitPkgInfo, GitPkgInstaller, ManifestRecord},
-        python::requirements::PythonRequirements,
-        services::{ServiceProvider, SystemdServiceProvider},
-    },
+use crate::openvair_manager::{
+    cmd_runner::CommandRunner,
+    files::FilesProvider,
+    pkg_management::github::{GithubPkgInfo, GithubPkgInstaller, InstallManifest, ManifestRecord},
+    python::requirements::PythonRequirements,
+    services::{ServiceProvider, SystemdServiceProvider},
 };
 
 pub trait PrometheusInstaller {
@@ -20,7 +18,7 @@ pub struct UbuntuPrometheusInstaller {
     runner: Rc<CommandRunner>,
     files: Rc<FilesProvider>,
     services: Rc<SystemdServiceProvider>,
-    git_pkg: Rc<GitPkgInstaller>,
+    git_pkg: Rc<GithubPkgInstaller>,
     config: UbuntuPrometheusInstallerConfig,
 }
 
@@ -77,19 +75,17 @@ impl UbuntuPrometheusInstaller {
             .get_version("prometheus")
             .ok_or(anyhow!("failed to get version for 'prometheus"))?;
 
-        let pkg_info = GitPkgInfo::builder()
+        let pkg_info = GithubPkgInfo::builder()
             .name("prometheus")
             .owner("prometheus")
             .version(version)
-            .manifest(
-                crate::openvair_manager::github_pkg_management::InstallManifest(vec![
-                    ManifestRecord::new("/usr/local/bin", ["prometheus", "promtool"]),
-                    ManifestRecord::new(
-                        "/etc/prometheus",
-                        ["consoles", "console_libraries", "prometheus.yml"],
-                    ),
-                ]),
-            )
+            .manifest(InstallManifest(vec![
+                ManifestRecord::new("/usr/local/bin", ["prometheus", "promtool"]),
+                ManifestRecord::new(
+                    "/etc/prometheus",
+                    ["consoles", "console_libraries", "prometheus.yml"],
+                ),
+            ]))
             .build();
 
         self.git_pkg.download_package(&pkg_info)?;
@@ -138,7 +134,7 @@ impl UbuntuPrometheusInstaller {
         runner: Rc<CommandRunner>,
         files: Rc<FilesProvider>,
         services: Rc<SystemdServiceProvider>,
-        git_pkg: Rc<GitPkgInstaller>,
+        git_pkg: Rc<GithubPkgInstaller>,
         config: UbuntuPrometheusInstallerConfig,
     ) -> Self {
         Self {

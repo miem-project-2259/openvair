@@ -7,15 +7,15 @@ use std::{ops::Deref, process::Command, rc::Rc};
 use crate::{openvair_manager::cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};
 
 #[derive(Clone, Debug)]
-pub struct GitPkgInstaller {
-    config: GitPkgInstallerConfig,
+pub struct GithubPkgInstaller {
+    config: GithubPkgInstallerConfig,
     runner: Rc<CommandRunner>,
     files: Rc<FilesProvider>,
 }
 
-impl GitPkgInstaller {
+impl GithubPkgInstaller {
     pub fn new(
-        config: GitPkgInstallerConfig,
+        config: GithubPkgInstallerConfig,
         runner: Rc<CommandRunner>,
         files: Rc<FilesProvider>,
     ) -> Self {
@@ -38,7 +38,7 @@ impl GitPkgInstaller {
         Ok(())
     }
 
-    pub fn download_package(&self, info: &GitPkgInfo) -> anyhow::Result<()> {
+    pub fn download_package(&self, info: &GithubPkgInfo) -> anyhow::Result<()> {
         let product = info.get_product_repr("linux", &self.config.proc);
 
         let url = format!(
@@ -69,16 +69,16 @@ impl GitPkgInstaller {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct GitPkgInfo {
+pub struct GithubPkgInfo {
     pub name: String,
     pub owner: String,
     pub version: String,
     pub manifest: InstallManifest,
 }
 
-impl GitPkgInfo {
-    pub fn builder() -> GitPkgInfoBuilder {
-        GitPkgInfoBuilder::default()
+impl GithubPkgInfo {
+    pub fn builder() -> GithubPkgInfoBuilder {
+        GithubPkgInfoBuilder::default()
     }
     pub fn get_product_repr(&self, target_os: &str, proc_type: &str) -> String {
         format!("{}-{}.{target_os}-{proc_type}", self.name, self.version)
@@ -86,11 +86,11 @@ impl GitPkgInfo {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct GitPkgInfoBuilder {
-    info: GitPkgInfo,
+pub struct GithubPkgInfoBuilder {
+    info: GithubPkgInfo,
 }
-impl GitPkgInfoBuilder {
-    pub fn build(self) -> GitPkgInfo {
+impl GithubPkgInfoBuilder {
+    pub fn build(self) -> GithubPkgInfo {
         self.info
     }
 
@@ -148,11 +148,11 @@ impl ManifestRecord {
 }
 
 #[derive(Clone, Debug)]
-pub struct GitPkgInstallerConfig {
+pub struct GithubPkgInstallerConfig {
     proc: String,
 }
 
-impl GitPkgInstallerConfig {
+impl GithubPkgInstallerConfig {
     pub fn new(proc: String) -> Self {
         Self { proc }
     }

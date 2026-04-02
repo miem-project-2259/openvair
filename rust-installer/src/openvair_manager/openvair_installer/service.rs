@@ -14,7 +14,7 @@ use crate::openvair_manager::{
     files::FilesProvider,
     node_exporter::installer::NodeExporterInstaller,
     openvair_installer::config::InstallerConfig,
-    pkg_management::PackageProvider,
+    pkg_management::distro::PackageProvider,
     project_config::OpenvairProjectConfig,
     prometheus::installer::PrometheusInstaller,
     python::provider::PythonProvider,

@@ -22,23 +22,21 @@ use std::{process::Command, rc::Rc};
 
 use clap::Parser;
 
-use crate::{
-    openvair_manager::cmd_runner::CommandRunner,
-    openvair_manager::docker::{installer::UbuntuDockerInstaller, provider::DockerProvider},
-    openvair_manager::pkg_management::UbuntuPackageProvider,
-    openvair_manager::project_config::OpenvairProjectConfig,
-    openvair_manager::{
-        cli::OpenvairManagerCli,
-        files::FilesProvider,
-        github_pkg_management::{GitPkgInstaller, GitPkgInstallerConfig},
-        node_exporter::installer::{
-            UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig,
-        },
-        openvair_installer::{config::InstallerConfig, service::OpenvairInstallerService},
-        prometheus::installer::{UbuntuPrometheusInstaller, UbuntuPrometheusInstallerConfig},
-        python::{provider::PythonProvider, requirements::PythonRequirements},
-        services::SystemdServiceProvider,
+use crate::openvair_manager::{
+    cli::OpenvairManagerCli,
+    cmd_runner::CommandRunner,
+    docker::{installer::UbuntuDockerInstaller, provider::DockerProvider},
+    files::FilesProvider,
+    node_exporter::installer::{UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig},
+    openvair_installer::{config::InstallerConfig, service::OpenvairInstallerService},
+    pkg_management::{
+        distro::ubuntu::UbuntuPackageProvider,
+        github::{GithubPkgInstaller, GithubPkgInstallerConfig},
     },
+    project_config::OpenvairProjectConfig,
+    prometheus::installer::{UbuntuPrometheusInstaller, UbuntuPrometheusInstallerConfig},
+    python::{provider::PythonProvider, requirements::PythonRequirements},
+    services::SystemdServiceProvider,
 };
 
 mod tests;
@@ -77,8 +75,8 @@ fn main() -> anyhow::Result<()> {
             docker_installer.set_os_type(&os_type);
             docker_installer.set_proc(&installer_cfg.processor_type);
             python.set_python_path(&format!("{}/venv/bin/python3", installer_cfg.project_path));
-            let git_pkg = Rc::new(GitPkgInstaller::new(
-                GitPkgInstallerConfig::new(installer_cfg.processor_type.clone()),
+            let git_pkg = Rc::new(GithubPkgInstaller::new(
+                GithubPkgInstallerConfig::new(installer_cfg.processor_type.clone()),
                 runner.clone(),
                 files.clone(),
             ));

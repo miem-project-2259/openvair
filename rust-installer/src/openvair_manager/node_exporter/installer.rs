@@ -2,14 +2,12 @@ use std::{process::Command, rc::Rc};
 
 use anyhow::anyhow;
 
-use crate::{
-    openvair_manager::cmd_runner::CommandRunner,
-    openvair_manager::{
-        files::FilesProvider,
-        github_pkg_management::{GitPkgInfo, GitPkgInstaller, InstallManifest, ManifestRecord},
-        python::requirements::PythonRequirements,
-        services::{ServiceProvider, SystemdServiceProvider},
-    },
+use crate::openvair_manager::{
+    cmd_runner::CommandRunner,
+    files::FilesProvider,
+    pkg_management::github::{GithubPkgInfo, GithubPkgInstaller, InstallManifest, ManifestRecord},
+    python::requirements::PythonRequirements,
+    services::{ServiceProvider, SystemdServiceProvider},
 };
 
 pub trait NodeExporterInstaller {
@@ -20,7 +18,7 @@ pub trait NodeExporterInstaller {
 pub struct UbuntuNodeExporterInstaller {
     runner: Rc<CommandRunner>,
     files: Rc<FilesProvider>,
-    git_pkg: Rc<GitPkgInstaller>,
+    git_pkg: Rc<GithubPkgInstaller>,
     services: Rc<SystemdServiceProvider>,
     config: UbuntuNodeExporterInstallerConfig,
 }
@@ -112,7 +110,7 @@ impl NodeExporterInstaller for UbuntuNodeExporterInstaller {
             .get_version("node_exporter")
             .ok_or(anyhow!("failed to get version for 'node_exporter'"))?;
 
-        let pkg_info = GitPkgInfo::builder()
+        let pkg_info = GithubPkgInfo::builder()
             .name("node_exporter")
             .owner("prometheus")
             .version(&version)
@@ -169,7 +167,7 @@ impl UbuntuNodeExporterInstaller {
         config: UbuntuNodeExporterInstallerConfig,
         runner: Rc<CommandRunner>,
         files: Rc<FilesProvider>,
-        git_pkg: Rc<GitPkgInstaller>,
+        git_pkg: Rc<GithubPkgInstaller>,
         services: Rc<SystemdServiceProvider>,
     ) -> Self {
         Self {

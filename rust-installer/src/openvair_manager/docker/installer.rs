@@ -3,10 +3,10 @@
 ///! Данный модуль задаёт основную логику установки Docker для разных дистрибутивов.
 use std::{process::Command, rc::Rc};
 
-use crate::{
-    openvair_manager::cmd_runner::CommandRunner,
-    openvair_manager::files::FilesProvider,
-    openvair_manager::pkg_management::{PackageProvider, UbuntuPackageProvider},
+use crate::openvair_manager::{
+    cmd_runner::CommandRunner,
+    files::FilesProvider,
+    pkg_management::distro::{PackageProvider, ubuntu::UbuntuPackageProvider},
 };
 
 pub trait DockerInstaller {

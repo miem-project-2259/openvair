@@ -2,10 +2,9 @@ use std::rc::Rc;
 
 use rstest::fixture;
 
-use crate::{
-    openvair_manager::cmd_runner::CommandRunner,
-    openvair_manager::pkg_management::UbuntuPackageProvider,
-    openvair_manager::python::provider::PythonProvider,
+use crate::openvair_manager::{
+    cmd_runner::CommandRunner, pkg_management::distro::ubuntu::UbuntuPackageProvider,
+    python::provider::PythonProvider,
 };
 
 #[fixture]
