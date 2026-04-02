@@ -1,6 +1,13 @@
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Clone, Debug, Parser)]
+#[command(
+    about = "A CLI manager program for Open vAIR",
+    long_about = "A CLI manager program for Open vAIR\n\n\
+                  This tool can be used to manage your Open vAIR installation\n\
+                  Such as install openvair, update it, uninstall it. More features pending.",
+    after_help = "Written by pine-free (Freya Pines)"
+)]
 pub struct OpenvairManagerCli {
     #[command(subcommand)]
     pub command: ManagerCommands,
