@@ -28,7 +28,7 @@ use crate::openvair_manager::{
     docker::{installer::UbuntuDockerInstaller, provider::DockerProvider},
     files::FilesProvider,
     node_exporter::installer::{UbuntuNodeExporterInstaller, UbuntuNodeExporterInstallerConfig},
-    openvair_installer::{config::InstallerConfig, service::OpenvairInstallerService},
+    openvair_installer::{config::OpenvairInstallerConfig, service::OpenvairInstaller},
     pkg_management::{
         distro::ubuntu::UbuntuPackageProvider,
         github::{GithubPkgInstaller, GithubPkgInstallerConfig},
@@ -57,8 +57,8 @@ fn main() -> anyhow::Result<()> {
     let cli = OpenvairManagerCli::parse();
     match cli.command {
         openvair_manager::cli::ManagerCommands::Install(openvair_manager_install_args) => {
-            let installer_cfg =
-                InstallerConfig::builder().build(runner.clone(), &openvair_manager_install_args);
+            let installer_cfg = OpenvairInstallerConfig::builder()
+                .build(runner.clone(), &openvair_manager_install_args);
             let project_cfg =
                 OpenvairProjectConfig::try_from_file(&installer_cfg.project_config_file)?;
             let third_party_requirements = Rc::new(PythonRequirements::from_file(
@@ -105,7 +105,7 @@ fn main() -> anyhow::Result<()> {
                 services.clone(),
             ));
 
-            let mut installer = OpenvairInstallerService::new(
+            let mut installer = OpenvairInstaller::new(
                 installer_cfg,
                 project_cfg,
                 pkg,

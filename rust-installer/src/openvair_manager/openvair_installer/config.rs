@@ -1,3 +1,6 @@
+///! Модуль конфигурации *установщика* Open vAIR
+///!
+///! Не путать с [`crate::openvair_manager::project_config`]
 use std::{process::Command, rc::Rc};
 
 use log::info;
@@ -7,7 +10,7 @@ use crate::{
 };
 
 #[derive(Default, Clone, Debug)]
-pub struct InstallerConfig {
+pub struct OpenvairInstallerConfig {
     pub user: String,
     pub os: String,
     pub arch: String,
@@ -21,18 +24,18 @@ pub struct InstallerConfig {
     pub processor_type: String,
 }
 
-impl InstallerConfig {
-    pub fn builder() -> InstallerConfigBuilder {
-        InstallerConfigBuilder::new()
+impl OpenvairInstallerConfig {
+    pub fn builder() -> OpenvairInstallerConfigBuilder {
+        OpenvairInstallerConfigBuilder::new()
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct InstallerConfigBuilder {
-    config: InstallerConfig,
+pub struct OpenvairInstallerConfigBuilder {
+    config: OpenvairInstallerConfig,
 }
 
-impl<'a> InstallerConfigBuilder {
+impl<'a> OpenvairInstallerConfigBuilder {
     pub fn new() -> Self {
         Self {
             config: Default::default(),
@@ -43,7 +46,7 @@ impl<'a> InstallerConfigBuilder {
         mut self,
         runner: Rc<CommandRunner>,
         install_args: &'a OpenvairManagerInstallArgs,
-    ) -> InstallerConfig {
+    ) -> OpenvairInstallerConfig {
         self.config.user = install_args.user.clone();
         self.config.os = runner
             .pipe(

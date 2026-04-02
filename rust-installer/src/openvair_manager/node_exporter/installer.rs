@@ -1,3 +1,6 @@
+///! Модуль установщика node_exporter
+///
+/// Данный модуль управляет логикой установки node_exporter на разных дистрибутивах
 use std::{process::Command, rc::Rc};
 
 use anyhow::anyhow;
