@@ -1,6 +1,8 @@
 ///! Модуль установщика Docker
 ///!
 ///! Данный модуль задаёт основную логику установки Docker для разных дистрибутивов.
+///!
+///! See also [`DockerInstaller`]
 use std::{process::Command, rc::Rc};
 
 use crate::openvair_manager::{

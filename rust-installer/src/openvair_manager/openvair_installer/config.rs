@@ -1,6 +1,8 @@
 ///! Модуль конфигурации *установщика* Open vAIR
 ///!
 ///! Не путать с [`crate::openvair_manager::project_config`]
+///!
+///! See also [`OpenvairInstallerConfig`]
 use std::{process::Command, rc::Rc};
 
 use log::info;

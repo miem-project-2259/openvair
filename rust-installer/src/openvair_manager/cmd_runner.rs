@@ -2,6 +2,8 @@
 ///!
 ///! Во время установки часто приходится запускать разные команды,
 ///! Передавать их друг в друга и т.п., данный модуль призван упростить эту задачу
+///!
+///! See also [`CommandRunner`]
 use std::process::{Command, ExitStatus, Output, Stdio};
 
 use anyhow::anyhow;

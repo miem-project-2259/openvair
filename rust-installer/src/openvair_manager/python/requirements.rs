@@ -1,4 +1,6 @@
 ///! Модуль работы с файлами requirements.txt для Python
+///!
+///! See also [`PythonRequirements`]
 use std::{ops::Deref, str::FromStr};
 
 #[derive(Clone, Debug, Default)]

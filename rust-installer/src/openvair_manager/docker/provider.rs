@@ -2,6 +2,8 @@
 ///!
 ///! Данный модуль предоставляет провайдер для работы с Docker,
 ///! в основном через shell.
+///!
+///! See also [`DockerProvider`]
 use std::{process::Command, rc::Rc};
 
 use crate::openvair_manager::cmd_runner::{CommandResult, CommandRunner};

@@ -3,6 +3,8 @@
 ///! Данный модуль предоставляет интерфейс для совершения
 ///! частых операций с файлами и директориями, такими как
 ///! перенос/переименование, копирование, удаление и запись
+///!
+///! See also [`FilesProvider`]
 use std::{process::Command, rc::Rc};
 
 use crate::openvair_manager::cmd_runner::CommandRunner;

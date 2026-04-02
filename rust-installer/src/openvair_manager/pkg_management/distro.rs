@@ -1,4 +1,6 @@
 ///! Модуль управления установкой на различных дистрибутивах
+///!
+///! See also [`PackageProvider`]
 use crate::openvair_manager::cmd_runner::CommandResult;
 
 pub trait PackageProvider {

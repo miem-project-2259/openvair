@@ -1,6 +1,8 @@
 ///! Модуль управления установкой пакетов на Ubuntu
 ///!
 ///! NOTE: поддерживается Ubuntu 22 и 24
+///!
+///! See also [`UbuntuPackageProvider`]
 use std::{process::Command, rc::Rc};
 
 use super::PackageProvider;

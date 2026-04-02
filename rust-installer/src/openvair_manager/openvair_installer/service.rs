@@ -1,6 +1,8 @@
 ///! Модуль установщика Open vAIR
 ///!
 ///! Здесь находится основная логика установки утилиты
+///!
+///! See also [`OpenvairInstaller`]
 use std::{path::Path, process::Command, rc::Rc, thread, time::Duration};
 
 use anyhow::anyhow;
@@ -17,11 +19,11 @@ use crate::openvair_manager::{
     files::FilesProvider,
     node_exporter::installer::NodeExporterInstaller,
     openvair_installer::config::OpenvairInstallerConfig,
+    os_services::ServiceProvider,
     pkg_management::distro::PackageProvider,
     project_config::OpenvairProjectConfig,
     prometheus::installer::PrometheusInstaller,
     python::provider::PythonProvider,
-    os_services::ServiceProvider,
 };
 
 pub struct OpenvairInstaller<'a> {

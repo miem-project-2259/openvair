@@ -2,6 +2,8 @@
 ///!
 ///! Данный модуль предоставляет интерфейс для установки пакетов с github
 ///! по версии, имени, владельцу и целевой архитектуре
+///!
+///! See also [`GithubPkgInstaller`]
 use std::{ops::Deref, process::Command, rc::Rc};
 
 use crate::{openvair_manager::cmd_runner::CommandRunner, openvair_manager::files::FilesProvider};

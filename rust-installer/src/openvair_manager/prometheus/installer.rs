@@ -1,4 +1,6 @@
 ///! Модуль установки Prometheus на различных дистрибутивах
+///!
+///! See also [`PrometheusInstaller`]
 use std::{process::Command, rc::Rc};
 
 use anyhow::anyhow;
@@ -6,9 +8,9 @@ use anyhow::anyhow;
 use crate::openvair_manager::{
     cmd_runner::CommandRunner,
     files::FilesProvider,
+    os_services::{ServiceProvider, SystemdServiceProvider},
     pkg_management::github::{GithubPkgInfo, GithubPkgInstaller, InstallManifest, ManifestRecord},
     python::requirements::PythonRequirements,
-    os_services::{ServiceProvider, SystemdServiceProvider},
 };
 
 pub trait PrometheusInstaller {

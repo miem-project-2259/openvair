@@ -1,6 +1,8 @@
 ///! Модуль определения CLI интерфейса
 ///!
 ///! Данный модуль задаёт консольный интерфейс, с которым работает пользователь
+///!
+///! See also [`OpenvairManagerCli`]
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Clone, Debug, Parser)]

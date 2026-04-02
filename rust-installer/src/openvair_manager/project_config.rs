@@ -1,6 +1,8 @@
 ///! Модуль управления конфигурацией *openvair*
-///
-/// Не путать с [`crate::openvair_manager::openvair_installer::config`]
+///!
+///! Не путать с [`crate::openvair_manager::openvair_installer::config`]
+///!
+///! See also [`OpenvairPorjectConfig`]
 use std::{
     fs::File,
     io::{Read, Write},

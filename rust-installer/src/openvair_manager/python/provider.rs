@@ -1,4 +1,6 @@
 ///! Модуль работы с Python
+///!
+///! See also [`PythonProvider`]
 use std::{process::Command, rc::Rc};
 
 use crate::openvair_manager::cmd_runner::CommandRunner;
